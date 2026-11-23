@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+.idea/
+
+# Генерируется из api/openapi.yaml командой `mise run generate`
+backend/src/generated/
+frontend/src/api/generated/
+.env
+.env.*
+!.env.example

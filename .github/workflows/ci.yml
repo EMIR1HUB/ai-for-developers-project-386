@@ -1,0 +1,25 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - '**'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Ставит версии инструментов из mise.toml
+      - uses: jdx/mise-action@v5
+
+      # Явно, а не через postinstall-хук: при кэше инструментов хук может не сработать
+      - run: mise run install
+
+      - run: mise run check

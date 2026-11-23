@@ -1,0 +1,26 @@
+amends "package://github.com/jdx/hk/releases/download/v2.13.0/hk@2.13.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v2.13.0/hk@2.13.0#/Builtins.pkl"
+// Using a coding agent? See https://hk.jdx.dev/agents
+
+local linters = new Mapping {
+    ["actionlint"] = Builtins.actionlint
+    ["ox_lint"] = (Builtins.ox_lint) {
+        check = "oxlint --deny-warnings {{files}}"
+    }
+    ["oxfmt"] = (Builtins.oxfmt) {
+        // workflow Хекслета генерируется и не редактируется
+        exclude = List(".github/workflows/hexlet-check.yml", "api/openapi.yaml")
+    }
+}
+
+steps = linters
+
+hooks {
+    ["commit-msg"] {
+        steps {
+            ["commitlint"] {
+                check = "commitlint --edit {{commit_msg_file}}"
+            }
+        }
+    }
+}
