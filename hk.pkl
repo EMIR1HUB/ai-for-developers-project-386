@@ -8,8 +8,14 @@ local linters = new Mapping {
         check = "oxlint --deny-warnings {{files}}"
     }
     ["oxfmt"] = (Builtins.oxfmt) {
-        // workflow Хекслета генерируется и не редактируется
-        exclude = List(".github/workflows/hexlet-check.yml", "api/openapi.yaml")
+        // Сгенерированные и сторонние файлы не форматируем: workflow Хекслета,
+        // OpenAPI из TypeSpec, скиллы из mattpocock/skills (обновляются `npx skills update`)
+        exclude = List(
+            ".github/workflows/hexlet-check.yml",
+            "api/openapi.yaml",
+            ".claude/skills/**",
+            "skills-lock.json"
+        )
     }
 }
 

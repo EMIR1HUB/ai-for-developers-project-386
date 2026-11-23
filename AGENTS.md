@@ -26,6 +26,8 @@
 
 ## Agent skills
 
+Набор [mattpocock/skills](https://github.com/mattpocock/skills) установлен в проект: `.claude/skills/`, версии в `skills-lock.json`. Вызывай скиллы по короткому имени (`/wayfinder`, `/implement-spec`), а не из глобального плагина `mattpocock-skills:*`. Обновление: `npx skills update -p`.
+
 ### Issue tracker
 
 Задачи и спеки ведутся в GitHub Issues репозитория через `gh`. См. `docs/agents/issue-tracker.md`.
