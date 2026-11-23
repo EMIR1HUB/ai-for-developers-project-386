@@ -22,3 +22,18 @@
 
 - Коммиты пишутся по Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`). Хук commit-msg проверяет их через commitlint.
 - `.github/workflows/hexlet-check.yml` не редактировать и не переименовывать.
+- Доменные понятия называй терминами из [GLOSSARY.md](GLOSSARY.md), архитектурные решения лежат в `docs/adr/`.
+
+## Agent skills
+
+### Issue tracker
+
+Задачи и спеки ведутся в GitHub Issues репозитория через `gh`. См. `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Стандартные пять меток: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. См. `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Один контекст: `GLOSSARY.md` и `docs/adr/` в корне. См. `docs/agents/domain.md`.
