@@ -66,14 +66,14 @@
 - Ручки: `GET /api/owner`, `GET`/`POST /api/event-types`, `GET /api/event-types/{id}`, `GET /api/event-types/{id}/slots`, `GET /api/bookings` (предстоящие, по возрастанию начала), создание бронирования, `GET /api/health`. Списки — массивы без пагинации, типы встреч в порядке создания. Поля моделей — в [решении](https://github.com/EMIR1HUB/ai-for-developers-project-386/issues/5).
 - Профиль владельца (имя, подпись, часовой пояс) задан в конфиге бэкенда (`backend/src/ownerProfile.ts`) и отдаётся через `GET /api/owner`; аватар — статичная картинка фронтенда (`frontend/public/owner-avatar.svg`).
 - Идентификатор типа встречи задаёт владелец при создании: строчные латинские буквы, цифры и дефис, 3–50 символов (например, `intro-15`); занятый идентификатор — `409`. Страница гостя — `/book/<id>`. Бронированию идентификатор (UUID) назначает сервер ([решение](https://github.com/EMIR1HUB/ai-for-developers-project-386/issues/2)).
-- `GET /api/event-types/{id}/slots` возвращает все слоты окна записи с признаком занятости; число свободных слотов по дням считает фронтенд.
+- `GET /api/event-types/{id}/slots` возвращает все слоты окна записи по возрастанию начала с признаком `available` (`false` — слот пересекается с бронированием); слоты, которые уже начались, в ответ не попадают. Число свободных слотов по дням считает фронтенд.
 - Ошибки передаются HTTP-статусами: `409` занятый слот, `422` валидация, `404` неизвестный тип встречи ([ADR-0003](docs/adr/0003-standard-http-status-codes.md)). Тело любой ошибки — `{ code, message, fields? }`: `code` из закрытого перечисления, `message` — русский текст для пользователя, `fields` (только в `422`) — все ошибочные поля `{ field, message }`. Нечитаемый JSON — `400`, неизвестный адрес `/api` — `404`, непредвиденная ошибка — `500` без деталей ([решение](https://github.com/EMIR1HUB/ai-for-developers-project-386/issues/4)).
 
 ## Стек
 
 - **Контракт:** TypeSpec (`api/main.tsp`) → OpenAPI 3.1 (`api/openapi.yaml`, коммитится).
 - **Бэкенд** (`backend/`): Node.js 24 + Fastify, TypeScript запускается напрямую (type stripping). Типы контракта генерирует Hey API.
-- **Фронтенд** (`frontend/`): Vite + React + Mantine. Клиентский SDK генерирует Hey API.
+- **Фронтенд** (`frontend/`): Vite + React + Mantine (календарь — `@mantine/dates`). Клиентский SDK генерирует Hey API.
 - **Тесты:** Vitest. **Линтеры:** oxlint, oxfmt, actionlint. **Коммиты:** Conventional Commits, проверяет commitlint. **Релизы:** release-please.
 - **Окружение:** mise (версии инструментов, задачи, dev-серверы через daemons), git-хуки через hk.
 
