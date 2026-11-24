@@ -7,6 +7,7 @@ import type { EventType } from './generated/types.gen.ts';
 export interface Store {
   /** Типы встреч в порядке создания */
   listEventTypes(): EventType[];
+  findEventType(id: string): EventType | undefined;
   addEventType(eventType: EventType): void;
 }
 
@@ -16,6 +17,7 @@ export function createStore(): Store {
 
   return {
     listEventTypes: () => [...eventTypes.values()],
+    findEventType: (id) => eventTypes.get(id),
     addEventType: (eventType) => {
       eventTypes.set(eventType.id, eventType);
     },

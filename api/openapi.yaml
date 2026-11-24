@@ -28,6 +28,49 @@ paths:
                 $ref: '#/components/schemas/ApiError'
       tags:
         - EventTypes
+    post:
+      operationId: EventTypes_create
+      description: Создание типа встречи владельцем. Занятый идентификатор — `409 EVENT_TYPE_ID_TAKEN`
+      parameters: []
+      responses:
+        '201':
+          description: Ресурс создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventType'
+        '400':
+          description: 'Ответ с ошибкой: статус и общее тело ошибки'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: 'Ответ с ошибкой: статус и общее тело ошибки'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: 'Ответ с ошибкой: статус и общее тело ошибки'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: 'Ответ с ошибкой: статус и общее тело ошибки'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - EventTypes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewEventType'
   /api/health:
     get:
       operationId: HealthCheck_check
@@ -124,3 +167,27 @@ components:
           type: string
           enum:
             - ok
+    NewEventType:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - durationMinutes
+      properties:
+        id:
+          type: string
+          description: Строчные латинские буквы, цифры и дефис (не в начале, не в конце и не подряд), 3–50 символов
+        title:
+          type: string
+          description: 1–100 символов
+        description:
+          type: string
+          description: До 500 символов, может быть пустым
+        durationMinutes:
+          type: integer
+          format: int32
+          description: 15–240, кратно 15
+      description: |-
+        Новый тип встречи. Сервер обрезает пробелы по краям строк и только потом проверяет поля
+        по правилам `EventType`, поэтому ограничения формата здесь не повторяются
