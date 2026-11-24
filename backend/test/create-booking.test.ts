@@ -146,7 +146,7 @@ describe('POST /api/bookings', () => {
   });
 
   describe('when booking 10:00–11:00 already exists', () => {
-    it('should respond 409 SLOT_TAKEN when 10:30–11:00 of another event type overlaps it partially', async () => {
+    it('should respond 409 SLOT_TAKEN when 10:30–11:00 of 30 minute type overlaps 60 minute booking partially', async () => {
       // given: тип на 60 минут занят в 10:00, тип на 30 минут просит 10:30
       const app = buildAppWithEventTypes();
       await bookTenToEleven(app);
@@ -155,6 +155,23 @@ describe('POST /api/bookings', () => {
       const response = await book(app, {
         eventTypeId: 'call-30',
         start: '2026-11-25T10:30:00+05:00',
+        ...GUEST,
+      });
+
+      // then
+      expect(response.statusCode).toBe(409);
+      expect(expectResponseToMatchContract(response, 'Bookings_create')).toEqual(SLOT_TAKEN);
+    });
+
+    it('should respond 409 SLOT_TAKEN when 09:45–10:15 of 30 minute type overlaps 60 minute booking beginning', async () => {
+      // given: тип на 60 минут занят в 10:00, тип на 30 минут просит 09:45
+      const app = buildAppWithEventTypes();
+      await bookTenToEleven(app);
+
+      // when
+      const response = await book(app, {
+        eventTypeId: 'call-30',
+        start: '2026-11-25T09:45:00+05:00',
         ...GUEST,
       });
 
