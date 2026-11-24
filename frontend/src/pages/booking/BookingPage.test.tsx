@@ -412,4 +412,49 @@ describe('Страница бронирования: данные гостя и 
       await screen.findByRole('heading', { name: 'Бронирование создано' }),
     ).toBeInTheDocument();
   });
+
+  it('should show connection error with retry when server responds with 500', async () => {
+    // given
+    mockBookingPage();
+    server.use(
+      mockApi('bookingsCreate', 500, {
+        code: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера. Попробуйте позже',
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp('/book/call-30');
+    await openGuestForm(user);
+    await fillGuestForm(user);
+
+    // when
+    await user.click(screen.getByRole('button', { name: 'Забронировать' }));
+
+    // then
+    expect(await screen.findByText('Не удалось связаться с сервером')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Повторить' })).toBeInTheDocument();
+    expect(
+      screen.queryByText('Внутренняя ошибка сервера. Попробуйте позже'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('should show connection error with retry when event type loading responds with 500', async () => {
+    // given
+    server.use(
+      mockApi('ownerGet', 200, OWNER),
+      mockApi('eventTypesGet', 500, {
+        code: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера. Попробуйте позже',
+      }),
+      mockApi('eventTypesListSlots', 200, SLOTS),
+    );
+
+    // when
+    renderApp('/book/call-30');
+
+    // then
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText('Не удалось связаться с сервером')).toBeInTheDocument();
+    expect(within(alert).getByRole('button', { name: 'Повторить' })).toBeInTheDocument();
+  });
 });

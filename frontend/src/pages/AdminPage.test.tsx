@@ -149,7 +149,7 @@ describe('Админка: типы встреч', () => {
     expect(field('Длительность')).toHaveAccessibleDescription('От 15 до 240 минут с шагом 15');
   });
 
-  it('should show server message above the form when creation fails unexpectedly', async () => {
+  it('should show connection error above the form when creation responds with 500', async () => {
     // given
     const user = userEvent.setup();
     renderApp('/admin');
@@ -171,9 +171,7 @@ describe('Админка: типы встреч', () => {
 
     // then
     const form = screen.getByRole('form', { name: 'Новый тип встречи' });
-    expect(
-      await within(form).findByText('Внутренняя ошибка сервера. Попробуйте позже'),
-    ).toBeInTheDocument();
+    expect(await within(form).findByText('Не удалось связаться с сервером')).toBeInTheDocument();
     expect(field('Идентификатор')).toHaveValue('call-30');
   });
 });
@@ -282,5 +280,41 @@ describe('Админка: предстоящие бронирования', () =
     const table = await within(upcomingSection()).findByRole('table');
     expect(within(table).getAllByRole('row')).toHaveLength(3);
     expect(within(upcomingSection()).queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('should show connection error with retry when upcoming bookings respond with 500', async () => {
+    // given
+    server.use(
+      mockApi('bookingsList', 500, {
+        code: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера. Попробуйте позже',
+      }),
+    );
+
+    // when
+    renderApp('/admin');
+
+    // then
+    const alert = await within(upcomingSection()).findByRole('alert');
+    expect(within(alert).getByText('Не удалось связаться с сервером')).toBeInTheDocument();
+    expect(within(alert).getByRole('button', { name: 'Повторить' })).toBeInTheDocument();
+  });
+
+  it('should show connection error with retry when event types respond with 500', async () => {
+    // given
+    server.use(
+      mockApi('eventTypesList', 500, {
+        code: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера. Попробуйте позже',
+      }),
+    );
+
+    // when
+    renderApp('/admin');
+
+    // then
+    const alert = await within(eventTypesSection()).findByRole('alert');
+    expect(within(alert).getByText('Не удалось связаться с сервером')).toBeInTheDocument();
+    expect(within(alert).getByRole('button', { name: 'Повторить' })).toBeInTheDocument();
   });
 });

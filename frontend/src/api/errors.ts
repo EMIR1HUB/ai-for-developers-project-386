@@ -12,9 +12,15 @@ export function isApiError(error: unknown): error is ApiError {
   );
 }
 
-/** Текст для пользователя: `message` сервера как есть, иначе сообщение о недоступности сервера */
+/**
+ * Текст для пользователя: `message` сервера как есть. Для сетевой ошибки и `INTERNAL_ERROR`
+ * (непредвиденная `500`) — сообщение о недоступности сервера (спецификация #11, раздел «Интерфейс»)
+ */
 export function errorMessage(error: unknown): string {
-  return isApiError(error) ? error.message : CONNECTION_ERROR_MESSAGE;
+  if (!isApiError(error) || error.code === 'INTERNAL_ERROR') {
+    return CONNECTION_ERROR_MESSAGE;
+  }
+  return error.message;
 }
 
 /** Ошибки полей формы, ключ — имя поля из ответа (вложенные поля через точку) */

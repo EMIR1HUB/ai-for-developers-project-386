@@ -130,7 +130,7 @@ describe('Каталог типов встреч', () => {
     expect(screen.queryByRole('status', { name: 'Загрузка типов встреч' })).not.toBeInTheDocument();
   });
 
-  it('should show server message and reload on retry when loading fails', async () => {
+  it('should show connection error and reload on retry when server responds with 500', async () => {
     // given
     server.use(
       mockApi('eventTypesList', 500, {
@@ -142,9 +142,10 @@ describe('Каталог типов встреч', () => {
     renderApp('/book');
     const alert = await screen.findByRole('alert');
     expect(within(alert).getByText('Не удалось загрузить типы встреч')).toBeInTheDocument();
+    expect(within(alert).getByText('Не удалось связаться с сервером')).toBeInTheDocument();
     expect(
-      within(alert).getByText('Внутренняя ошибка сервера. Попробуйте позже'),
-    ).toBeInTheDocument();
+      within(alert).queryByText('Внутренняя ошибка сервера. Попробуйте позже'),
+    ).not.toBeInTheDocument();
 
     // when
     server.use(mockApi('eventTypesList', 200, [CALL]));
