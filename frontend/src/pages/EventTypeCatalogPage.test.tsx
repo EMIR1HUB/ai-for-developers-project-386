@@ -17,7 +17,67 @@ const CALL = {
   durationMinutes: 30,
 };
 
+const OWNER = {
+  name: 'Алия Нурланова',
+  subtitle: 'Продуктовый дизайнер',
+  timeZone: 'Asia/Almaty',
+};
+
 describe('Каталог типов встреч', () => {
+  it('should show owner card with avatar, name and subtitle when catalog is opened', async () => {
+    // given
+    server.use(mockApi('ownerGet', 200, OWNER), mockApi('eventTypesList', 200, [INTRO]));
+
+    // when
+    renderApp('/book');
+
+    // then
+    const ownerCard = await screen.findByRole('region', { name: 'Профиль владельца' });
+    expect(within(ownerCard).getByRole('img', { name: 'Алия Нурланова' })).toBeInTheDocument();
+    expect(within(ownerCard).getByText('Алия Нурланова')).toBeInTheDocument();
+    expect(within(ownerCard).getByText('Продуктовый дизайнер')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Выберите тип встречи' }),
+    ).toBeInTheDocument();
+  });
+
+  it('should show empty state when owner has not created any event type', async () => {
+    // given
+    server.use(mockApi('eventTypesList', 200, []));
+
+    // when
+    renderApp('/book');
+
+    // then
+    expect(
+      await screen.findByText('Владелец пока не создал ни одного типа встречи'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+  });
+
+  it('should show owner error and reload profile on retry when profile loading fails', async () => {
+    // given
+    server.use(
+      mockApi('ownerGet', 500, {
+        code: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера. Попробуйте позже',
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp('/book');
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText('Не удалось загрузить профиль владельца')).toBeInTheDocument();
+
+    // when
+    server.use(mockApi('ownerGet', 200, OWNER));
+    await user.click(within(alert).getByRole('button', { name: 'Повторить' }));
+
+    // then
+    const ownerCard = await screen.findByRole('region', { name: 'Профиль владельца' });
+    expect(within(ownerCard).getByText('Алия Нурланова')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('should show event type cards in server order when catalog is opened', async () => {
     // given
     server.use(mockApi('eventTypesList', 200, [INTRO, CALL]));
