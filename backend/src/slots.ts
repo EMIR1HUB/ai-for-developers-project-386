@@ -65,3 +65,43 @@ export function computeSlots(
 
   return slots;
 }
+
+/** Почему начало не совпадает ни с одним предлагаемым слотом */
+export type SlotRejection = 'started' | 'outsideWindow' | 'offGrid' | 'outsideWorkingHours';
+
+const MINUTE_MS = 60 * 1000;
+
+function rejectionOf(start: Date, now: Date): SlotRejection {
+  if (start <= now) {
+    return 'started';
+  }
+  const today = ownerDateOf(now);
+  const windowEnd = ownerMoment({ ...today, day: today.day + BOOKING_WINDOW_DAYS }, 0);
+  if (start >= windowEnd) {
+    return 'outsideWindow';
+  }
+  const minutesOfDay = (start.getTime() - ownerMoment(ownerDateOf(start), 0).getTime()) / MINUTE_MS;
+  if (minutesOfDay % SLOT_STEP_MINUTES !== 0) {
+    return 'offGrid';
+  }
+  return 'outsideWorkingHours';
+}
+
+/**
+ * Слот, который ручка слотов сейчас предлагает с этим началом, занятый или свободный, либо причина,
+ * почему такого слота нет. Слот берётся из `computeSlots`, поэтому сервер принимает ровно
+ * те начала, что показывает гостю; занятость проверяет вызывающий код.
+ */
+export function findOfferedSlot(
+  eventType: Pick<EventType, 'durationMinutes'>,
+  start: Date,
+  now: Date,
+): { slot: TimeInterval } | { rejection: SlotRejection } {
+  // Набор предлагаемых начал от бронирований не зависит: занятые слоты тоже показываются
+  const slot = computeSlots(eventType, [], now).find(
+    (candidate) => candidate.start.getTime() === start.getTime(),
+  );
+  return slot
+    ? { slot: { start: slot.start, end: slot.end } }
+    : { rejection: rejectionOf(start, now) };
+}

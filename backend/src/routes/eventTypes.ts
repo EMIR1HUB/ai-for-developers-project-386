@@ -18,7 +18,7 @@ import { parseBody, type FieldReader } from '../validation.ts';
 // не в конце и не подряд (спецификация #11, «Модели»)
 const EVENT_TYPE_ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-const EVENT_TYPE_NOT_FOUND_MESSAGE = 'Тип встречи не найден';
+export const EVENT_TYPE_NOT_FOUND_MESSAGE = 'Тип встречи не найден';
 
 function readNewEventType(fields: FieldReader): EventType {
   return {

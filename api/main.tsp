@@ -189,3 +189,82 @@ interface EventTypes {
   @route("/{id}/slots")
   listSlots(@path id: string): Slot[] | EventTypeNotFound | InternalError;
 }
+
+/** Сводка типа встречи в бронировании */
+model BookingEventType {
+  id: string;
+  title: string;
+  durationMinutes: int32;
+}
+
+/** Интервал `[start, end)`, занятый гостем под тип встречи. После создания не меняется и не отменяется */
+model Booking {
+  /** UUID, который назначает сервер */
+  @format("uuid")
+  id: string;
+
+  eventType: BookingEventType;
+
+  /** Начало со смещением пояса владельца, например `2026-11-25T10:00:00+05:00` */
+  start: offsetDateTime;
+
+  /** Конец: начало плюс длительность типа встречи, считает сервер */
+  end: offsetDateTime;
+
+  @minLength(1)
+  @maxLength(100)
+  guestName: string;
+
+  /** Как ввёл гость */
+  @maxLength(254)
+  guestEmail: string;
+
+  /** Заметка гостя для владельца, нет, если гость её не оставил */
+  @maxLength(1000)
+  note?: string;
+
+  /** Момент создания со смещением пояса владельца */
+  createdAt: offsetDateTime;
+}
+
+/**
+ * Новое бронирование. Сервер обрезает пробелы по краям строк и только потом проверяет поля
+ * по правилам `Booking`, поэтому ограничения формата здесь не повторяются
+ */
+model NewBooking {
+  /** Идентификатор типа встречи */
+  eventTypeId: string;
+
+  /**
+   * Начало слота из `GET /api/event-types/{id}/slots`: ISO 8601 со смещением или `Z`,
+   * время без смещения — `422 VALIDATION_ERROR`
+   */
+  start: string;
+
+  /** 1–100 символов */
+  guestName: string;
+
+  /** Формат email, до 254 символов */
+  guestEmail: string;
+
+  /** До 1000 символов */
+  note?: string;
+}
+
+@route("/api/bookings")
+@tag("Bookings")
+interface Bookings {
+  /**
+   * Создание бронирования гостем; конец сервер считает по длительности типа встречи.
+   * `422`: `VALIDATION_ERROR` — поля невалидны; `SLOT_NOT_OFFERED` — `start` не совпадает с началом
+   * слота, который сейчас предлагает ручка слотов (причина в `message`).
+   * `409 SLOT_TAKEN` — интервал пересекается с бронированием любого типа встречи
+   */
+  @post create(@body booking: NewBooking):
+    | Created<Booking>
+    | MalformedRequest
+    | EventTypeNotFound
+    | ErrorResponse<409>
+    | ErrorResponse<422>
+    | InternalError;
+}

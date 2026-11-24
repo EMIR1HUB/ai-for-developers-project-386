@@ -6,6 +6,34 @@ const VALIDATION_MESSAGE = 'Поля заполнены неверно';
 const REQUIRED_MESSAGE = 'Обязательное поле';
 const NOT_STRING_MESSAGE = 'Должно быть строкой';
 const NOT_INTEGER_MESSAGE = 'Должно быть целым числом';
+const EMAIL_MESSAGE = 'Неверный формат email';
+const OFFSET_DATE_TIME_MESSAGE =
+  'Время в формате ISO 8601 со смещением, например 2026-11-25T10:00:00+05:00';
+
+// Граница длины адреса из RFC 5321; формат проверяется упрощённо: одна `@`, без пробелов, точка в домене
+const EMAIL_MAX_LENGTH = 254;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// ISO 8601 с обязательным смещением или `Z`: без смещения момент неоднозначен (спецификация #11, «Время»)
+const OFFSET_DATE_TIME_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(?<offset>Z|(?<sign>[+-])(?<hours>\d{2}):(?<minutes>\d{2}))$/;
+const MINUTE_MS = 60 * 1000;
+
+/** Момент из ISO 8601 со смещением; `undefined`, если формат не тот или такого времени нет в календаре */
+function parseOffsetDateTime(value: string): Date | undefined {
+  const groups = OFFSET_DATE_TIME_PATTERN.exec(value)?.groups;
+  const moment = new Date(value);
+  if (!groups || Number.isNaN(moment.getTime())) {
+    return undefined;
+  }
+  // V8 переносит несуществующие даты вперёд (`2026-11-31` → 1 декабря, `24:00` → следующий день),
+  // поэтому сверяем, что дата и часы, пересчитанные обратно в то же смещение, не сдвинулись
+  const offsetMinutes =
+    groups.offset === 'Z'
+      ? 0
+      : (groups.sign === '-' ? -1 : 1) * (Number(groups.hours) * 60 + Number(groups.minutes));
+  const local = new Date(moment.getTime() + offsetMinutes * MINUTE_MS).toISOString();
+  return local.slice(0, 16) === value.slice(0, 16) ? moment : undefined;
+}
 
 export interface StringRules {
   /** По умолчанию 0: пустая строка допустима */
@@ -33,6 +61,12 @@ export interface IntegerRules {
 export interface FieldReader {
   /** Обязательная строка. Пробелы по краям обрезаются до проверки, строка из пробелов — пустая */
   string(field: string, rules: StringRules): string;
+  /** Необязательная строка: нет поля, `null` или строка из пробелов — `undefined` */
+  optionalString(field: string, rules: StringRules): string | undefined;
+  /** Обязательный email до 254 символов, возвращается как введён (без пробелов по краям) */
+  email(field: string): string;
+  /** Обязательный момент времени ISO 8601 со смещением или `Z` */
+  offsetDateTime(field: string): Date;
   /** Обязательное целое число */
   integer(field: string, rules: IntegerRules): number;
 }
@@ -72,8 +106,24 @@ export function parseBody<T>(body: unknown, read: (fields: FieldReader) => T): T
     errors.push({ field, message });
   };
 
+  const checkString = (
+    field: string,
+    value: string,
+    { minLength = 0, maxLength, pattern, patternMessage }: StringRules,
+  ) => {
+    // Длина в символах Unicode, как `maxLength` в JSON Schema, а не в UTF-16
+    const length = [...value].length;
+    if (length === 0 && minLength > 0) {
+      reject(field, REQUIRED_MESSAGE);
+    } else if (length < minLength || length > maxLength) {
+      reject(field, lengthMessage(minLength, maxLength));
+    } else if (pattern && !pattern.test(value)) {
+      reject(field, patternMessage ?? 'Неверный формат');
+    }
+  };
+
   const reader: FieldReader = {
-    string(field, { minLength = 0, maxLength, pattern, patternMessage }) {
+    string(field, rules) {
       const raw = valueAt(body, field);
       if (raw === undefined || raw === null) {
         reject(field, REQUIRED_MESSAGE);
@@ -84,16 +134,53 @@ export function parseBody<T>(body: unknown, read: (fields: FieldReader) => T): T
         return '';
       }
       const value = raw.trim();
-      // Длина в символах Unicode, как `maxLength` в JSON Schema, а не в UTF-16
-      const length = [...value].length;
-      if (length === 0 && minLength > 0) {
-        reject(field, REQUIRED_MESSAGE);
-      } else if (length < minLength || length > maxLength) {
-        reject(field, lengthMessage(minLength, maxLength));
-      } else if (pattern && !pattern.test(value)) {
-        reject(field, patternMessage ?? 'Неверный формат');
-      }
+      checkString(field, value, rules);
       return value;
+    },
+
+    optionalString(field, rules) {
+      const raw = valueAt(body, field);
+      if (raw === undefined || raw === null) {
+        return undefined;
+      }
+      if (typeof raw !== 'string') {
+        reject(field, NOT_STRING_MESSAGE);
+        return undefined;
+      }
+      const value = raw.trim();
+      if (value === '') {
+        return undefined;
+      }
+      checkString(field, value, rules);
+      return value;
+    },
+
+    email(field) {
+      return reader.string(field, {
+        minLength: 1,
+        maxLength: EMAIL_MAX_LENGTH,
+        pattern: EMAIL_PATTERN,
+        patternMessage: EMAIL_MESSAGE,
+      });
+    },
+
+    offsetDateTime(field) {
+      const raw = valueAt(body, field);
+      if (raw === undefined || raw === null) {
+        reject(field, REQUIRED_MESSAGE);
+        return new Date(Number.NaN);
+      }
+      if (typeof raw !== 'string') {
+        reject(field, NOT_STRING_MESSAGE);
+        return new Date(Number.NaN);
+      }
+      const value = raw.trim();
+      const moment = parseOffsetDateTime(value);
+      if (!moment) {
+        reject(field, value === '' ? REQUIRED_MESSAGE : OFFSET_DATE_TIME_MESSAGE);
+        return new Date(Number.NaN);
+      }
+      return moment;
     },
 
     integer(field, { min, max, step, message }) {
