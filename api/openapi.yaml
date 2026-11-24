@@ -4,7 +4,30 @@ info:
   version: 0.0.0
 tags:
   - name: Health
+  - name: EventTypes
 paths:
+  /api/event-types:
+    get:
+      operationId: EventTypes_list
+      description: Типы встреч в порядке создания
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventType'
+        '500':
+          description: 'Ответ с ошибкой: статус и общее тело ошибки'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - EventTypes
   /api/health:
     get:
       operationId: HealthCheck_check
@@ -21,6 +44,77 @@ paths:
         - Health
 components:
   schemas:
+    ApiError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode'
+        message:
+          type: string
+          description: Текст для пользователя на русском, фронтенд показывает его как есть
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+          description: Все ошибочные поля, только для `422 VALIDATION_ERROR`
+      description: Тело любой ошибки API
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_ERROR
+        - SLOT_NOT_OFFERED
+        - EVENT_TYPE_NOT_FOUND
+        - NOT_FOUND
+        - EVENT_TYPE_ID_TAKEN
+        - SLOT_TAKEN
+        - MALFORMED_REQUEST
+        - INTERNAL_ERROR
+      description: 'Код ошибки: закрытое перечисление, клиент различает ошибки по нему'
+    EventType:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - durationMinutes
+      properties:
+        id:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+          description: 'Идентификатор, который задаёт владелец: строчные латинские буквы, цифры и дефис (не в начале, не в конце и не подряд)'
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+          description: Может быть пустым
+        durationMinutes:
+          type: integer
+          format: int32
+          minimum: 15
+          maximum: 240
+          description: Длительность в минутах, кратна 15
+      description: Шаблон встречи владельца. После создания не меняется и не удаляется
+    FieldError:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+          description: Имя поля, вложенные поля через точку
+        message:
+          type: string
+          description: Текст ошибки для пользователя
+      description: Ошибка одного поля запроса
     Health:
       type: object
       required:

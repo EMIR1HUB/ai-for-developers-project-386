@@ -1,0 +1,26 @@
+import type { FastifyReply } from 'fastify';
+import type { ApiError, ErrorCode, FieldError } from './generated/types.gen.ts';
+
+// Статус однозначно следует из кода ошибки (спецификация #11, раздел «Ошибки»),
+// поэтому маршруты передают только код, и пара «код — статус» не расходится между ручками
+const STATUS_BY_CODE: Record<ErrorCode, number> = {
+  MALFORMED_REQUEST: 400,
+  EVENT_TYPE_NOT_FOUND: 404,
+  NOT_FOUND: 404,
+  EVENT_TYPE_ID_TAKEN: 409,
+  SLOT_TAKEN: 409,
+  VALIDATION_ERROR: 422,
+  SLOT_NOT_OFFERED: 422,
+  INTERNAL_ERROR: 500,
+};
+
+/** Отправляет ошибку в общей схеме `{ code, message, fields? }` со статусом, который задан для кода */
+export function sendError(
+  reply: FastifyReply,
+  code: ErrorCode,
+  message: string,
+  fields?: FieldError[],
+): FastifyReply {
+  const body: ApiError = fields ? { code, message, fields } : { code, message };
+  return reply.status(STATUS_BY_CODE[code]).send(body);
+}

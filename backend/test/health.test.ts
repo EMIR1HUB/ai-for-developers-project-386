@@ -1,17 +1,17 @@
-import { afterAll, describe, expect, it } from 'vitest';
-import { buildApp } from '../src/app.ts';
+import { describe, expect, it } from 'vitest';
+import { expectResponseToMatchContract } from './support/contract.ts';
+import { buildTestApp } from './support/testApp.ts';
 
 describe('GET /api/health', () => {
-  const app = buildApp();
-
-  afterAll(() => app.close());
-
   it('should respond 200 with status ok when app is started', async () => {
+    // given
+    const app = buildTestApp();
+
     // when
     const response = await app.inject({ method: 'GET', url: '/api/health' });
 
     // then
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ status: 'ok' });
+    expect(expectResponseToMatchContract(response, 'HealthCheck_check')).toEqual({ status: 'ok' });
   });
 });
