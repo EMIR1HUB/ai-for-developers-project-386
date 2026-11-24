@@ -1,0 +1,18 @@
+import type { ApiError } from './generated/types.gen';
+
+const CONNECTION_ERROR_MESSAGE = 'Не удалось связаться с сервером';
+
+/** Ошибка в общей схеме API. Сетевая ошибка приходит из SDK как `TypeError` и сюда не подходит */
+export function isApiError(error: unknown): error is ApiError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    typeof (error as ApiError).code === 'string' &&
+    typeof (error as ApiError).message === 'string'
+  );
+}
+
+/** Текст для пользователя: `message` сервера как есть, иначе сообщение о недоступности сервера */
+export function errorMessage(error: unknown): string {
+  return isApiError(error) ? error.message : CONNECTION_ERROR_MESSAGE;
+}
