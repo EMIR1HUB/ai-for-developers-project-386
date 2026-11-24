@@ -1,4 +1,6 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+import { resolve } from 'node:path';
+import fastifyStatic from '@fastify/static';
+import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { seedDemoData } from './demoData.ts';
 import { ApiFailure, sendError } from './errors.ts';
 import type { Health } from './generated/types.gen.ts';
@@ -18,6 +20,11 @@ export interface AppOptions {
   demoData?: boolean;
   /** По умолчанию новое пустое хранилище в памяти */
   store?: Store;
+  /**
+   * Папка собранного фронтенда (`frontend/dist`). Если задана, сервер раздаёт её файлы,
+   * а адреса страниц вне `/api` отдают `index.html`. По умолчанию раздачи нет
+   */
+  staticDir?: string;
 }
 
 /** Зависимости, которые получают маршруты */
@@ -43,7 +50,6 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
   }
 
   // Встроенный формат ошибок Fastify наружу не выходит: любой ответ с ошибкой — в общей схеме
-  app.setNotFoundHandler((_request, reply) => sendError(reply, 'NOT_FOUND', 'Адрес не найден'));
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ApiFailure) {
       return sendError(reply, error.code, error.message, error.fields);
@@ -63,5 +69,32 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
   registerEventTypeRoutes(app, context);
   registerBookingRoutes(app, context);
 
+  // Обработчик 404 в Fastify действует в пределах префикса плагина: неизвестный адрес под `/api`
+  // всегда получает JSON, даже когда остальные адреса уходят в index.html
+  app.register(async (api) => api.setNotFoundHandler(sendNotFound), { prefix: '/api' });
+
+  if (options.staticDir) {
+    serveFrontend(app, options.staticDir);
+  } else {
+    app.setNotFoundHandler(sendNotFound);
+  }
+
   return app;
+}
+
+function sendNotFound(_request: FastifyRequest, reply: FastifyReply): FastifyReply {
+  return sendError(reply, 'NOT_FOUND', 'Адрес не найден');
+}
+
+function serveFrontend(app: FastifyInstance, staticDir: string): void {
+  // wildcard: false — маршруты только на файлы, которые есть в папке при старте. С wildcard
+  // плагин сам перехватывал бы все адреса, и неизвестный `/api/*` получал бы index.html
+  app.register(fastifyStatic, { root: resolve(staticDir), wildcard: false });
+  // Адреса страниц (`/book/<id>`, `/admin`) разбирает роутер фронтенда, поэтому сервер отдаёт
+  // на них index.html. Остальные методы на неизвестный адрес — обычный JSON 404
+  app.setNotFoundHandler((request, reply) =>
+    request.method === 'GET' || request.method === 'HEAD'
+      ? reply.sendFile('index.html')
+      : sendNotFound(request, reply),
+  );
 }
