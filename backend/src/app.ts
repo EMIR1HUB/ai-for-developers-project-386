@@ -3,6 +3,7 @@ import { seedDemoData } from './demoData.ts';
 import { sendError } from './errors.ts';
 import type { Health } from './generated/types.gen.ts';
 import { registerEventTypeRoutes } from './routes/eventTypes.ts';
+import { registerOwnerRoutes } from './routes/owner.ts';
 import { createStore, type Store } from './store.ts';
 
 /** Часы приложения: «сейчас» берётся только из них, чтобы тесты могли зафиксировать время */
@@ -42,6 +43,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
   });
 
   app.get('/api/health', async (): Promise<Health> => ({ status: 'ok' }));
+  registerOwnerRoutes(app);
   registerEventTypeRoutes(app, context);
 
   return app;

@@ -74,6 +74,24 @@ model ErrorResponse<Status extends int32> {
 /** Непредвиденная ошибка сервера (`INTERNAL_ERROR`) */
 alias InternalError = ErrorResponse<500>;
 
+/** Профиль владельца, который видит гость. Задан в конфиге бэкенда */
+model OwnerProfile {
+  name: string;
+
+  /** Подпись под именем, например род занятий */
+  subtitle: string;
+
+  /** Часовой пояс владельца в формате IANA, например `Asia/Almaty` */
+  timeZone: string;
+}
+
+@route("/api/owner")
+@tag("Owner")
+interface Owner {
+  /** Профиль владельца */
+  @get get(): OwnerProfile | InternalError;
+}
+
 /** Шаблон встречи владельца. После создания не меняется и не удаляется */
 model EventType {
   /** Идентификатор, который задаёт владелец: строчные латинские буквы, цифры и дефис (не в начале, не в конце и не подряд) */
