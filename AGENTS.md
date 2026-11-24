@@ -10,12 +10,26 @@
 - `mise run dev`: бэкенд на `:3000` и фронтенд на `:5173` фоновыми daemons (`mise daemons ls | logs | stop`).
 - Один тест: `npm test -w @calendar/backend -- test/health.test.ts` или `npm test -w @calendar/frontend -- -t "<имя теста>"`.
 
+## Генерируемые файлы
+
+Эти пути создаёт `mise run generate`. Руками их не правят: правка вносится в `api/main.tsp`, затем запускается генерация.
+
+| Путь                          | Из чего            | В git                                                           |
+| ----------------------------- | ------------------ | --------------------------------------------------------------- |
+| `api/openapi.yaml`            | `api/main.tsp`     | да, CI проверяет, что после `mise run generate` он не изменился |
+| `backend/src/generated/`      | `api/openapi.yaml` | нет (`.gitignore`)                                              |
+| `frontend/src/api/generated/` | `api/openapi.yaml` | нет (`.gitignore`)                                              |
+
+После изменения контракта выполни `mise run generate` и закоммить `api/openapi.yaml`. Задачи `typecheck`, `test` и `dev` перегенерируют код сами.
+
 ## Устройство
 
-- Источник правды для API: `api/main.tsp`. `api/openapi.yaml` генерируется из него и коммитится, руками его не правят. После изменения контракта выполни `mise run generate` и закоммить `openapi.yaml`.
-- `backend/src/generated/` и `frontend/src/api/generated/` генерирует Hey API из `openapi.yaml`, в git их нет. Задачи `typecheck`, `test` и `dev` перегенерируют их сами.
-- Бэкенд: Node запускает `.ts` без сборки (type stripping), поэтому относительные импорты пишутся с расширением `.ts`. Маршруты Fastify пишутся вручную по контракту, типы запросов и ответов берутся из `generated`. `buildApp()` в `src/app.ts` нужен тестам (`app.inject`), а `src/server.ts` только слушает порт.
-- Фронтенд вызывает API только через сгенерированный SDK. `baseUrl` задаётся в `src/api/client-config.ts`. В dev Vite проксирует `/api` на `127.0.0.1:3000`.
+- Источник правды для API: `api/main.tsp`. Тело любой ошибки — модель `ApiError` `{ code, message, fields? }`, `code` из закрытого перечисления `ErrorCode`; ответ с ошибкой описывается как `ErrorResponse<статус>`.
+- Бэкенд: Node запускает `.ts` без сборки (type stripping), поэтому относительные импорты пишутся с расширением `.ts`. Маршруты Fastify пишутся вручную по контракту (`src/routes/`), типы запросов и ответов берутся из `generated`. `buildApp(options)` в `src/app.ts` нужен тестам (`app.inject`), а `src/server.ts` только слушает порт.
+- Бэкенд: «сейчас» берётся только из часов `now` в `AppContext`, данные — из хранилища в памяти `src/store.ts` (ADR-0002, методы синхронные). Ошибки отправляются только через `sendError` из `src/errors.ts`: статус следует из кода. `DEMO_DATA=false` выключает демо-типы встреч.
+- API-тесты бэкенда собирают приложение через `buildTestApp()` (`test/support/testApp.ts`: фиксированные часы, без демо-данных) и сверяют каждый ответ с контрактом через `expectResponseToMatchContract(response, operationId)` (`test/support/contract.ts`).
+- Фронтенд вызывает API только через сгенерированный SDK, прямой `fetch` запрещён правилом oxlint. `baseUrl` задаётся в `src/api/client-config.ts`. В dev Vite проксирует `/api` на `127.0.0.1:3000`. Данные страниц грузит `useApiQuery` (`src/api/useApiQuery.ts`), текст ошибки даёт `errorMessage` (`src/api/errors.ts`).
+- Тесты фронтенда рендерят приложение по адресу (`renderApp`) и подменяют сеть MSW: `server.use(mockApi('<операция>', статус, тело))` из `src/test/mockApi.ts`, обработчики типизированы сгенерированными типами. Новая операция контракта добавляется в `ApiOperations` и `OPERATIONS` там же. Запрос без обработчика роняет тест.
 - TypeScript закреплён на 6.x: в TS 7 нет JS API компилятора, и генератор Hey API на нём падает.
 
 ## Правила

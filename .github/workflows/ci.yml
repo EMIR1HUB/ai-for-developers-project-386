@@ -22,4 +22,18 @@ jobs:
       # Явно, а не через postinstall-хук: при кэше инструментов хук может не сработать
       - run: mise run install
 
+      # api/openapi.yaml коммитится: после генерации из api/main.tsp рабочее дерево должно
+      # остаться чистым, иначе контракт изменён без `mise run generate`
+      - run: mise run generate
+
+      - name: Check generated artifacts are committed
+        run: |
+          git diff --exit-code
+          changes="$(git status --porcelain --untracked-files=all)"
+          if [ -n "$changes" ]; then
+            echo "$changes"
+            echo "::error::mise run generate changed committed files. Run it locally and commit the result."
+            exit 1
+          fi
+
       - run: mise run check
