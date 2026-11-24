@@ -96,6 +96,27 @@ describe('Каталог типов встреч', () => {
     expect(within(second).getByText('30 мин')).toBeInTheDocument();
   });
 
+  it('should open booking page of event type when its card is clicked', async () => {
+    // given
+    server.use(
+      mockApi('eventTypesList', 200, [INTRO, CALL]),
+      mockApi('eventTypesGet', 200, CALL),
+      mockApi('eventTypesListSlots', 200, []),
+    );
+    const user = userEvent.setup();
+    renderApp('/book');
+    const [, second] = await screen.findAllByRole('article');
+
+    // when
+    await user.click(within(second).getByRole('link'));
+
+    // then
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Встреча 30 минут' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Выберите тип встречи' })).not.toBeInTheDocument();
+  });
+
   it('should show skeleton while event types are loading', async () => {
     // given
     server.use(mockApi('eventTypesList', 200, [INTRO]));

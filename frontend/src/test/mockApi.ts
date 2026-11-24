@@ -1,9 +1,15 @@
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { setupServer } from 'msw/node';
 import type {
+  EventTypesGetData,
+  EventTypesGetErrors,
+  EventTypesGetResponses,
   EventTypesListData,
   EventTypesListErrors,
   EventTypesListResponses,
+  EventTypesListSlotsData,
+  EventTypesListSlotsErrors,
+  EventTypesListSlotsResponses,
   OwnerGetData,
   OwnerGetErrors,
   OwnerGetResponses,
@@ -19,6 +25,16 @@ interface ApiOperations {
     data: EventTypesListData;
     responses: EventTypesListResponses;
     errors: EventTypesListErrors;
+  };
+  eventTypesGet: {
+    data: EventTypesGetData;
+    responses: EventTypesGetResponses;
+    errors: EventTypesGetErrors;
+  };
+  eventTypesListSlots: {
+    data: EventTypesListSlotsData;
+    responses: EventTypesListSlotsResponses;
+    errors: EventTypesListSlotsErrors;
   };
   ownerGet: {
     data: OwnerGetData;
@@ -36,6 +52,8 @@ const OPERATIONS: {
   [Name in OperationName]: { method: Method; url: ApiOperations[Name]['data']['url'] };
 } = {
   eventTypesList: { method: 'get', url: '/api/event-types' },
+  eventTypesGet: { method: 'get', url: '/api/event-types/{id}' },
+  eventTypesListSlots: { method: 'get', url: '/api/event-types/{id}/slots' },
   ownerGet: { method: 'get', url: '/api/owner' },
 };
 

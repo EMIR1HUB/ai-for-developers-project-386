@@ -27,3 +27,10 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: () => false,
   }),
 });
+
+// jsdom не реализует ResizeObserver, а ScrollArea Mantine следит через него за размерами
+window.ResizeObserver = class {
+  observe = noop;
+  unobserve = noop;
+  disconnect = noop;
+};

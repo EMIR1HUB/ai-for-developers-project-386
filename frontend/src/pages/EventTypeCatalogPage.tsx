@@ -1,8 +1,5 @@
 import {
-  Alert,
-  Avatar,
   Badge,
-  Button,
   Card,
   Container,
   Group,
@@ -12,42 +9,22 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { IconAlertCircle, IconCalendarOff, IconClock } from '@tabler/icons-react';
-import { errorMessage } from '../api/errors.ts';
+import { IconCalendarOff, IconClock } from '@tabler/icons-react';
+import { Link } from 'react-router';
 import { eventTypesList, ownerGet } from '../api/generated/sdk.gen';
 import type { EventType, OwnerProfile } from '../api/generated/types.gen';
 import { useApiQuery } from '../api/useApiQuery.ts';
+import { LoadErrorAlert } from '../components/LoadErrorAlert.tsx';
+import { OwnerAvatar } from '../components/OwnerAvatar.tsx';
+import { bookingPath } from '../paths.ts';
 
 const SKELETON_CARDS = 3;
-// Аватар владельца — статичная картинка фронтенда, в профиле владельца его нет
-const OWNER_AVATAR_URL = '/owner-avatar.svg';
-
-function LoadErrorAlert({
-  title,
-  error,
-  onRetry,
-}: {
-  title: string;
-  error: unknown;
-  onRetry: () => void;
-}) {
-  return (
-    <Alert color="red" variant="light" title={title} icon={<IconAlertCircle />}>
-      <Stack gap="sm" align="flex-start">
-        <Text size="sm">{errorMessage(error)}</Text>
-        <Button variant="light" color="red" size="xs" onClick={onRetry}>
-          Повторить
-        </Button>
-      </Stack>
-    </Alert>
-  );
-}
 
 function OwnerCard({ owner }: { owner: OwnerProfile }) {
   return (
     <Card component="section" aria-label="Профиль владельца" withBorder radius="lg" padding="lg">
       <Group wrap="nowrap">
-        <Avatar src={OWNER_AVATAR_URL} alt={owner.name} size="lg" radius="xl" color="orange" />
+        <OwnerAvatar name={owner.name} size="lg" />
         <div>
           <Text fw={600} size="lg">
             {owner.name}
@@ -96,19 +73,30 @@ function OwnerSection() {
 
 function EventTypeCard({ eventType }: { eventType: EventType }) {
   return (
-    <Card component="article" withBorder radius="lg" padding="lg" shadow="sm">
-      <Group justify="space-between" align="flex-start" wrap="nowrap" mb="xs">
-        <Title order={3} size="h4">
-          {eventType.title}
-        </Title>
-        <Badge variant="light" color="orange" leftSection={<IconClock size={12} />}>
-          {eventType.durationMinutes} мин
-        </Badge>
-      </Group>
-      <Text c="dimmed" size="sm">
-        {eventType.description}
-      </Text>
-    </Card>
+    // Вся карточка — ссылка на страницу бронирования, обёртка article сохраняет её смысл в списке
+    <article>
+      <Card
+        component={Link}
+        to={bookingPath(eventType.id)}
+        h="100%"
+        withBorder
+        radius="lg"
+        padding="lg"
+        shadow="sm"
+      >
+        <Group justify="space-between" align="flex-start" wrap="nowrap" mb="xs">
+          <Title order={3} size="h4">
+            {eventType.title}
+          </Title>
+          <Badge variant="light" color="orange" leftSection={<IconClock size={12} />}>
+            {eventType.durationMinutes} мин
+          </Badge>
+        </Group>
+        <Text c="dimmed" size="sm">
+          {eventType.description}
+        </Text>
+      </Card>
+    </article>
   );
 }
 
