@@ -29,6 +29,72 @@ paths:
                 $ref: '#/components/schemas/ApiError'
       tags:
         - EventTypes
+  /api/event-types/{id}:
+    get:
+      operationId: EventTypes_get
+      description: Тип встречи по идентификатору
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventType'
+        '404':
+          description: 'Ответ с ошибкой: статус и общее тело ошибки'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: 'Ответ с ошибкой: статус и общее тело ошибки'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - EventTypes
+  /api/event-types/{id}/slots:
+    get:
+      operationId: EventTypes_listSlots
+      description: |-
+        Слоты окна записи (сегодня по поясу владельца и ещё 13 дней) по возрастанию начала.
+        Слоты, которые уже начались, не предлагаются
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Slot'
+        '404':
+          description: 'Ответ с ошибкой: статус и общее тело ошибки'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: 'Ответ с ошибкой: статус и общее тело ошибки'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - EventTypes
   /api/health:
     get:
       operationId: HealthCheck_check
@@ -161,3 +227,24 @@ components:
           type: string
           description: Часовой пояс владельца в формате IANA, например `Asia/Almaty`
       description: Профиль владельца, который видит гость. Задан в конфиге бэкенда
+    Slot:
+      type: object
+      required:
+        - start
+        - end
+        - available
+      properties:
+        start:
+          type: string
+          format: date-time
+          description: Начало со смещением пояса владельца, например `2026-11-24T09:00:00+05:00`
+        end:
+          type: string
+          format: date-time
+          description: 'Конец: начало плюс длительность типа встречи'
+        available:
+          type: boolean
+          description: '`false`, если слот пересекается с бронированием любого типа встречи'
+      description: |-
+        Интервал времени `[start, end)` длиной в длительность типа встречи внутри рабочих часов владельца.
+        Не хранится, сервер вычисляет его по текущему моменту и бронированиям

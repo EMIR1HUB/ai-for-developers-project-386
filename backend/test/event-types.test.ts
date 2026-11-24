@@ -75,3 +75,44 @@ describe('GET /api/event-types', () => {
     ]);
   });
 });
+
+describe('GET /api/event-types/{id}', () => {
+  it('should return event type when it exists', async () => {
+    // given
+    const store = createStore();
+    store.addEventType({
+      id: 'call-30',
+      title: 'Встреча 30 минут',
+      description: 'Подробный разговор',
+      durationMinutes: 30,
+    });
+    const app = buildTestApp({ store });
+
+    // when
+    const response = await app.inject({ method: 'GET', url: '/api/event-types/call-30' });
+
+    // then
+    expect(response.statusCode).toBe(200);
+    expect(expectResponseToMatchContract(response, 'EventTypes_get')).toEqual({
+      id: 'call-30',
+      title: 'Встреча 30 минут',
+      description: 'Подробный разговор',
+      durationMinutes: 30,
+    });
+  });
+
+  it('should respond 404 EVENT_TYPE_NOT_FOUND when event type does not exist', async () => {
+    // given
+    const app = buildTestApp();
+
+    // when
+    const response = await app.inject({ method: 'GET', url: '/api/event-types/unknown-type' });
+
+    // then
+    expect(response.statusCode).toBe(404);
+    expect(expectResponseToMatchContract(response, 'EventTypes_get')).toEqual({
+      code: 'EVENT_TYPE_NOT_FOUND',
+      message: 'Тип встречи не найден',
+    });
+  });
+});

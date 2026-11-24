@@ -114,9 +114,40 @@ model EventType {
   durationMinutes: int32;
 }
 
+/** Тип встречи с таким идентификатором не найден (`EVENT_TYPE_NOT_FOUND`) */
+alias EventTypeNotFound = ErrorResponse<404>;
+
+/**
+ * Интервал времени `[start, end)` длиной в длительность типа встречи внутри рабочих часов владельца.
+ * Не хранится, сервер вычисляет его по текущему моменту и бронированиям
+ */
+model Slot {
+  /** Начало со смещением пояса владельца, например `2026-11-24T09:00:00+05:00` */
+  start: offsetDateTime;
+
+  /** Конец: начало плюс длительность типа встречи */
+  end: offsetDateTime;
+
+  /** `false`, если слот пересекается с бронированием любого типа встречи */
+  available: boolean;
+}
+
 @route("/api/event-types")
 @tag("EventTypes")
 interface EventTypes {
   /** Типы встреч в порядке создания */
   @get list(): EventType[] | InternalError;
+
+  /** Тип встречи по идентификатору */
+  @get
+  @route("/{id}")
+  get(@path id: string): EventType | EventTypeNotFound | InternalError;
+
+  /**
+   * Слоты окна записи (сегодня по поясу владельца и ещё 13 дней) по возрастанию начала.
+   * Слоты, которые уже начались, не предлагаются
+   */
+  @get
+  @route("/{id}/slots")
+  listSlots(@path id: string): Slot[] | EventTypeNotFound | InternalError;
 }
