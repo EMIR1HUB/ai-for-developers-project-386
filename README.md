@@ -74,7 +74,7 @@
 - **Контракт:** TypeSpec (`api/main.tsp`) → OpenAPI 3.1 (`api/openapi.yaml`, коммитится).
 - **Бэкенд** (`backend/`): Node.js 24 + Fastify, TypeScript запускается напрямую (type stripping). Типы контракта генерирует Hey API.
 - **Фронтенд** (`frontend/`): Vite + React + Mantine (календарь — `@mantine/dates`). Клиентский SDK генерирует Hey API.
-- **Тесты:** Vitest. **Линтеры:** oxlint, oxfmt, actionlint. **Коммиты:** Conventional Commits, проверяет commitlint. **Релизы:** release-please.
+- **Тесты:** Vitest, браузерные сценарии — Playwright (Chromium). **Линтеры:** oxlint, oxfmt, actionlint. **Коммиты:** Conventional Commits, проверяет commitlint. **Релизы:** release-please.
 - **Окружение:** mise (версии инструментов, задачи, dev-серверы через daemons), git-хуки через hk.
 
 ## Установка
@@ -88,7 +88,7 @@ mise trust
 mise install
 ```
 
-`mise install` ставит Node, hk, pitchfork и actionlint нужных версий, затем через postinstall-хук выполняет `npm ci` и устанавливает git-хуки (`hk install`).
+`mise install` ставит Node, hk, pitchfork и actionlint нужных версий, затем через postinstall-хук выполняет `npm ci`, скачивает Chromium для браузерных тестов (`mise run browsers`) и устанавливает git-хуки (`hk install`). Системные библиотеки для Chromium хук не ставит: на Linux без них браузер не запустится, их ставит `npx playwright install --with-deps chromium` (нужен sudo).
 
 ## Использование
 
@@ -97,9 +97,20 @@ mise install
 | `mise run dev`                         | Генерирует код из контракта и запускает бэкенд (`:3000`) и фронтенд (`http://localhost:5173`) в фоне |
 | `mise daemons ls` / `logs` / `stop`    | Состояние, логи и остановка dev-серверов                                                             |
 | `mise run generate`                    | TypeSpec → `api/openapi.yaml` → типы бэкенда и SDK фронтенда                                         |
-| `mise run check`                       | Все проверки: линтеры, типы, тесты. Эту же команду запускает CI на каждый push                       |
+| `mise run check`                       | Все проверки: линтеры, типы, тесты, браузерные сценарии. Эту же команду запускает CI на каждый push  |
+| `mise run e2e`                         | Собирает фронтенд и прогоняет браузерные сценарии Playwright на сервере `:4173` без демо-данных      |
+| `mise run browsers`                    | Скачивает Chromium для браузерных сценариев (делает postinstall-хук `mise install`)                  |
 | `mise run lint` / `typecheck` / `test` | Проверки по отдельности                                                                              |
 | `mise run format`                      | Автоисправление линтеров и форматирование                                                            |
+
+**Собранный фронтенд с одного сервера.** В dev фронтенд отдаёт Vite, а в браузерных тестах (и в контейнере) собранный `frontend/dist` раздаёт сам Fastify, если задана переменная `STATIC_DIR`. Адреса страниц вне `/api` (`/book/<id>`, `/admin`) получают `index.html`, неизвестный адрес под `/api` по-прежнему отвечает JSON `404 NOT_FOUND`. Запуск вручную:
+
+```bash
+npm run build -w @calendar/frontend
+STATIC_DIR=../frontend/dist npm start -w @calendar/backend  # http://localhost:3000
+```
+
+**Браузерные сценарии** (`e2e/tests/`) идут на настоящем сервере без подмены ответов API: `mise run e2e` собирает фронтенд, Playwright запускает сервер на `127.0.0.1:4173` с `DEMO_DATA=false` и останавливает его после прогона. Порт должен быть свободен: чужой сервер на нём не переиспользуется. Сценарии работают на реальном времени и берут слот из ответа ручки слотов. Один сценарий: `npm run e2e -w @calendar/e2e -- -g "<имя теста>"` (после `npm run build -w @calendar/frontend`). Если сценарий упал в CI, отчёт Playwright со следами лежит в артефакте `playwright-report` прогона.
 
 ## Релизы
 
