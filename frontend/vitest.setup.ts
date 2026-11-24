@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom/vitest';
+import { notifications } from '@mantine/notifications';
 import { cleanup } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import { server } from './src/test/mockApi.ts';
@@ -8,6 +9,8 @@ beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => {
   cleanup();
   server.resetHandlers();
+  // Уведомления Mantine живут в глобальном хранилище и иначе перешли бы в следующий тест
+  notifications.clean();
 });
 afterAll(() => server.close());
 

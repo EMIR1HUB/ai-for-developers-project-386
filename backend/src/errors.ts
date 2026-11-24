@@ -14,6 +14,22 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   INTERNAL_ERROR: 500,
 };
 
+/**
+ * Отказ в общей схеме, который можно бросить из маршрута или помощника (например, из `parseBody`).
+ * Общий обработчик ошибок приложения отправляет его через `sendError`.
+ */
+export class ApiFailure extends Error {
+  readonly code: ErrorCode;
+  readonly fields: FieldError[] | undefined;
+
+  constructor(code: ErrorCode, message: string, fields?: FieldError[]) {
+    super(message);
+    this.name = 'ApiFailure';
+    this.code = code;
+    this.fields = fields;
+  }
+}
+
 /** Отправляет ошибку в общей схеме `{ code, message, fields? }` со статусом, который задан для кода */
 export function sendError(
   reply: FastifyReply,

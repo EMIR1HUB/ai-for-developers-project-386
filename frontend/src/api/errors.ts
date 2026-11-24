@@ -16,3 +16,14 @@ export function isApiError(error: unknown): error is ApiError {
 export function errorMessage(error: unknown): string {
   return isApiError(error) ? error.message : CONNECTION_ERROR_MESSAGE;
 }
+
+/** Ошибки полей формы, ключ — имя поля из ответа (вложенные поля через точку) */
+export type FieldErrors = Partial<Record<string, string>>;
+
+/** Ошибки полей из `422 VALIDATION_ERROR`; для любой другой ошибки — пустой объект */
+export function fieldErrors(error: unknown): FieldErrors {
+  if (!isApiError(error) || error.code !== 'VALIDATION_ERROR') {
+    return {};
+  }
+  return Object.fromEntries((error.fields ?? []).map(({ field, message }) => [field, message]));
+}

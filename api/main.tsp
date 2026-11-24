@@ -74,6 +74,18 @@ model ErrorResponse<Status extends int32> {
 /** Непредвиденная ошибка сервера (`INTERNAL_ERROR`) */
 alias InternalError = ErrorResponse<500>;
 
+/** Тело запроса не читается как JSON-объект (`MALFORMED_REQUEST`) */
+alias MalformedRequest = ErrorResponse<400>;
+
+/** Поля запроса невалидны (`VALIDATION_ERROR`), все ошибочные поля перечислены в `fields` */
+alias ValidationFailed = ErrorResponse<422>;
+
+/** Ресурс создан */
+model Created<T> {
+  @statusCode statusCode: 201;
+  @body body: T;
+}
+
 /** Профиль владельца, который видит гость. Задан в конфиге бэкенда */
 model OwnerProfile {
   name: string;
@@ -132,11 +144,37 @@ model Slot {
   available: boolean;
 }
 
+/**
+ * Новый тип встречи. Сервер обрезает пробелы по краям строк и только потом проверяет поля
+ * по правилам `EventType`, поэтому ограничения формата здесь не повторяются
+ */
+model NewEventType {
+  /** Строчные латинские буквы, цифры и дефис (не в начале, не в конце и не подряд), 3–50 символов */
+  id: string;
+
+  /** 1–100 символов */
+  title: string;
+
+  /** До 500 символов, может быть пустым */
+  description: string;
+
+  /** 15–240, кратно 15 */
+  durationMinutes: int32;
+}
+
 @route("/api/event-types")
 @tag("EventTypes")
 interface EventTypes {
   /** Типы встреч в порядке создания */
   @get list(): EventType[] | InternalError;
+
+  /** Создание типа встречи владельцем. Занятый идентификатор — `409 EVENT_TYPE_ID_TAKEN` */
+  @post create(@body eventType: NewEventType):
+    | Created<EventType>
+    | MalformedRequest
+    | ErrorResponse<409>
+    | ValidationFailed
+    | InternalError;
 
   /** Тип встречи по идентификатору */
   @get
