@@ -1,7 +1,8 @@
 import { screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { mockApi, server } from '../../test/mockApi.ts';
+import type { NewBooking } from '../../api/generated/types.gen';
+import { mockApi, mockApiNetworkError, server } from '../../test/mockApi.ts';
 import { renderApp } from '../../test/renderApp.tsx';
 
 const OWNER = {
@@ -203,5 +204,212 @@ describe('Страница бронирования: выбор времени',
       await screen.findByRole('heading', { level: 1, name: 'Тип встречи не найден' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'К каталогу' })).toHaveAttribute('href', '/book');
+  });
+});
+
+const BOOKING = {
+  id: '0b8c3c52-6a43-4c1e-a8f4-1f0f8c9b2d71',
+  eventType: { id: 'call-30', title: 'Встреча 30 минут', durationMinutes: 30 },
+  start: '2026-11-25T10:00:00+05:00',
+  end: '2026-11-25T10:30:00+05:00',
+  guestName: 'Иван Петров',
+  guestEmail: 'ivan@example.com',
+  note: 'Обсудить проект',
+  createdAt: '2026-11-24T10:00:00+05:00',
+};
+
+const SLOT_TAKEN = {
+  code: 'SLOT_TAKEN',
+  message: 'Это время уже заняли. Выберите другой слот',
+} as const;
+
+function guestField(label: 'Имя' | 'Email' | 'Заметка') {
+  return screen.getByRole('textbox', { name: label });
+}
+
+/** Выбрать слот 25 ноября 10:00–10:30 и перейти к форме данных гостя */
+async function openGuestForm(user: UserEvent) {
+  const column = await screen.findByRole('region', { name: 'Слоты дня' });
+  await user.click(within(column).getByRole('button', { name: '10:00–10:30 Свободно' }));
+  await user.click(screen.getByRole('button', { name: 'Продолжить' }));
+}
+
+async function fillGuestForm(user: UserEvent) {
+  await user.type(guestField('Имя'), 'Иван Петров');
+  await user.type(guestField('Email'), 'ivan@example.com');
+  await user.type(guestField('Заметка'), 'Обсудить проект');
+}
+
+describe('Страница бронирования: данные гостя и подтверждение', () => {
+  it('should send chosen slot with guest data and show confirmation when booking is created', async () => {
+    // given
+    mockBookingPage();
+    const requests: NewBooking[] = [];
+    server.use(mockApi('bookingsCreate', 201, BOOKING, (body) => requests.push(body)));
+    const user = userEvent.setup();
+    renderApp('/book/call-30');
+    await openGuestForm(user);
+    expect(within(summaryCard()).getByText('10:00–10:30')).toBeInTheDocument();
+    await fillGuestForm(user);
+
+    // when
+    await user.click(screen.getByRole('button', { name: 'Забронировать' }));
+
+    // then
+    expect(
+      await screen.findByRole('heading', { name: 'Бронирование создано' }),
+    ).toBeInTheDocument();
+    expect(requests).toEqual([
+      {
+        eventTypeId: 'call-30',
+        start: '2026-11-25T10:00:00+05:00',
+        guestName: 'Иван Петров',
+        guestEmail: 'ivan@example.com',
+        note: 'Обсудить проект',
+      },
+    ]);
+    const confirmation = screen.getByRole('region', { name: 'Бронирование создано' });
+    expect(within(confirmation).getByText('Встреча 30 минут')).toBeInTheDocument();
+    expect(within(confirmation).getByText('среда, 25 ноября')).toBeInTheDocument();
+    expect(within(confirmation).getByText('10:00–10:30 по Алматы (UTC+5)')).toBeInTheDocument();
+    expect(within(confirmation).getByText('Иван Петров')).toBeInTheDocument();
+    expect(within(confirmation).getByText('ivan@example.com')).toBeInTheDocument();
+    expect(within(confirmation).getByText('Обсудить проект')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'К каталогу' })).toHaveAttribute('href', '/book');
+  });
+
+  it('should return to time selection with reloaded slots and kept form data when slot was taken', async () => {
+    // given
+    mockBookingPage();
+    server.use(mockApi('bookingsCreate', 409, SLOT_TAKEN));
+    const user = userEvent.setup();
+    renderApp('/book/call-30');
+    await openGuestForm(user);
+    await fillGuestForm(user);
+    // Пока гость заполнял форму, 10:00–10:30 заняли: после конфликта сервер отдаст его занятым
+    server.use(
+      mockApi(
+        'eventTypesListSlots',
+        200,
+        SLOTS.map((s) =>
+          s.start === '2026-11-25T10:00:00+05:00' ? { ...s, available: false } : s,
+        ),
+      ),
+    );
+
+    // when
+    await user.click(screen.getByRole('button', { name: 'Забронировать' }));
+
+    // then
+    expect(
+      await screen.findByText('Это время уже заняли. Выберите другой слот'),
+    ).toBeInTheDocument();
+    const column = await screen.findByRole('region', { name: 'Слоты дня' });
+    expect(
+      await within(column).findByRole('button', { name: '10:00–10:30 Занято' }),
+    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Продолжить' })).toBeDisabled();
+
+    await user.click(within(column).getByRole('button', { name: '09:00–09:30 Свободно' }));
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
+    expect(guestField('Имя')).toHaveValue('Иван Петров');
+    expect(guestField('Email')).toHaveValue('ivan@example.com');
+    expect(guestField('Заметка')).toHaveValue('Обсудить проект');
+  });
+
+  it('should return to time selection with server reason when slot is no longer offered', async () => {
+    // given
+    mockBookingPage();
+    server.use(
+      mockApi('bookingsCreate', 422, {
+        code: 'SLOT_NOT_OFFERED',
+        message: 'Это время уже прошло. Выберите другой слот',
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp('/book/call-30');
+    await openGuestForm(user);
+    await fillGuestForm(user);
+
+    // when
+    await user.click(screen.getByRole('button', { name: 'Забронировать' }));
+
+    // then
+    expect(
+      await screen.findByText('Это время уже прошло. Выберите другой слот'),
+    ).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Слоты дня' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Забронировать' })).not.toBeInTheDocument();
+  });
+
+  it('should show server errors under fields when guest data is invalid', async () => {
+    // given
+    mockBookingPage();
+    server.use(
+      mockApi('bookingsCreate', 422, {
+        code: 'VALIDATION_ERROR',
+        message: 'Поля заполнены неверно',
+        fields: [
+          { field: 'guestName', message: 'Обязательное поле' },
+          { field: 'guestEmail', message: 'Неверный формат email' },
+          { field: 'note', message: 'Не длиннее 1000 символов' },
+        ],
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp('/book/call-30');
+    await openGuestForm(user);
+    await user.type(guestField('Email'), 'ivan.example.com');
+
+    // when
+    await user.click(screen.getByRole('button', { name: 'Забронировать' }));
+
+    // then
+    expect(await screen.findByText('Неверный формат email')).toBeInTheDocument();
+    expect(guestField('Имя')).toHaveAccessibleDescription('Обязательное поле');
+    expect(guestField('Имя')).toHaveAttribute('aria-invalid', 'true');
+    expect(guestField('Email')).toHaveAccessibleDescription('Неверный формат email');
+    expect(guestField('Заметка')).toHaveAccessibleDescription('Не длиннее 1000 символов');
+    expect(screen.getByRole('button', { name: 'Забронировать' })).toBeInTheDocument();
+  });
+
+  it('should keep entered data when guest goes back to time selection and returns', async () => {
+    // given
+    mockBookingPage();
+    const user = userEvent.setup();
+    renderApp('/book/call-30');
+    await openGuestForm(user);
+    await fillGuestForm(user);
+
+    // when
+    await user.click(screen.getByRole('button', { name: 'Назад' }));
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
+
+    // then
+    expect(guestField('Имя')).toHaveValue('Иван Петров');
+    expect(guestField('Email')).toHaveValue('ivan@example.com');
+    expect(guestField('Заметка')).toHaveValue('Обсудить проект');
+    expect(within(summaryCard()).getByText('10:00–10:30')).toBeInTheDocument();
+  });
+
+  it('should offer retry and create booking on retry when server is unreachable', async () => {
+    // given
+    mockBookingPage();
+    server.use(mockApiNetworkError('bookingsCreate'));
+    const user = userEvent.setup();
+    renderApp('/book/call-30');
+    await openGuestForm(user);
+    await fillGuestForm(user);
+    await user.click(screen.getByRole('button', { name: 'Забронировать' }));
+    expect(await screen.findByText('Не удалось связаться с сервером')).toBeInTheDocument();
+    server.use(mockApi('bookingsCreate', 201, BOOKING));
+
+    // when
+    await user.click(screen.getByRole('button', { name: 'Повторить' }));
+
+    // then
+    expect(
+      await screen.findByRole('heading', { name: 'Бронирование создано' }),
+    ).toBeInTheDocument();
   });
 });

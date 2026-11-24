@@ -1,6 +1,9 @@
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { setupServer } from 'msw/node';
 import type {
+  BookingsCreateData,
+  BookingsCreateErrors,
+  BookingsCreateResponses,
   EventTypesCreateData,
   EventTypesCreateErrors,
   EventTypesCreateResponses,
@@ -49,6 +52,11 @@ interface ApiOperations {
     responses: OwnerGetResponses;
     errors: OwnerGetErrors;
   };
+  bookingsCreate: {
+    data: BookingsCreateData;
+    responses: BookingsCreateResponses;
+    errors: BookingsCreateErrors;
+  };
 }
 
 type OperationName = keyof ApiOperations;
@@ -65,6 +73,7 @@ const OPERATIONS: {
   eventTypesGet: { method: 'get', url: '/api/event-types/{id}' },
   eventTypesListSlots: { method: 'get', url: '/api/event-types/{id}/slots' },
   ownerGet: { method: 'get', url: '/api/owner' },
+  bookingsCreate: { method: 'post', url: '/api/bookings' },
 };
 
 // Hey API пишет параметры пути как `{id}`, MSW ждёт `:id`

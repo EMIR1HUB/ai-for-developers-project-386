@@ -1,13 +1,21 @@
 import { Button, Card, Container, Grid, Skeleton, Stack, Text, Title } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { isApiError } from '../../api/errors.ts';
 import { eventTypesGet, eventTypesListSlots, ownerGet } from '../../api/generated/sdk.gen';
-import type { Slot } from '../../api/generated/types.gen';
+import type { Booking, Slot } from '../../api/generated/types.gen';
 import { useApiQuery } from '../../api/useApiQuery.ts';
 import { LoadErrorAlert } from '../../components/LoadErrorAlert.tsx';
 import { paths } from '../../paths.ts';
+import { ConfirmationStep } from './ConfirmationStep.tsx';
+import { GuestDetailsStep, type GuestValues } from './GuestDetailsStep.tsx';
 import { TimeSelectionStep } from './TimeSelectionStep.tsx';
+
+const EMPTY_GUEST: GuestValues = { guestName: '', guestEmail: '', note: '' };
+
+/** Шаги страницы бронирования на одном адресе (спецификация #11, «Интерфейс») */
+type Step = { name: 'time' } | { name: 'details' } | { name: 'confirmation'; booking: Booking };
 
 function EventTypeNotFound() {
   return (
@@ -61,6 +69,16 @@ function BookingFlow({ eventTypeId }: { eventTypeId: string }) {
   );
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+  const [step, setStep] = useState<Step>({ name: 'time' });
+  const [guest, setGuest] = useState<GuestValues>(EMPTY_GUEST);
+
+  // Слот заняли или он перестал предлагаться: гость выбирает другой, введённые данные остаются
+  function handleSlotLost(message: string) {
+    notifications.show({ color: 'red', message });
+    setSelectedSlot(null);
+    slots.retry();
+    setStep({ name: 'time' });
+  }
 
   if (
     details.status === 'error' &&
@@ -81,7 +99,7 @@ function BookingFlow({ eventTypeId }: { eventTypeId: string }) {
             onRetry={details.retry}
           />
         )}
-        {details.status === 'success' && (
+        {details.status === 'success' && step.name === 'time' && (
           <TimeSelectionStep
             eventType={details.data.eventType}
             owner={details.data.owner}
@@ -90,9 +108,23 @@ function BookingFlow({ eventTypeId }: { eventTypeId: string }) {
             onSelectDay={setSelectedDay}
             selectedSlot={selectedSlot}
             onSelectSlot={setSelectedSlot}
-            // Следующий шаг «данные гостя» добавляет #16
-            onContinue={() => {}}
+            onContinue={() => setStep({ name: 'details' })}
           />
+        )}
+        {details.status === 'success' && step.name === 'details' && selectedSlot && (
+          <GuestDetailsStep
+            eventType={details.data.eventType}
+            owner={details.data.owner}
+            slot={selectedSlot}
+            values={guest}
+            onChange={setGuest}
+            onBack={() => setStep({ name: 'time' })}
+            onBooked={(booking) => setStep({ name: 'confirmation', booking })}
+            onSlotLost={handleSlotLost}
+          />
+        )}
+        {details.status === 'success' && step.name === 'confirmation' && (
+          <ConfirmationStep booking={step.booking} owner={details.data.owner} />
         )}
       </Stack>
     </Container>
