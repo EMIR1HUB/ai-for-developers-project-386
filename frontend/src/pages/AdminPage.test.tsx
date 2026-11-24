@@ -1,8 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import type { NewEventType } from '../api/generated/types.gen';
-import { mockApi, server } from '../test/mockApi.ts';
+import type { Booking, NewEventType } from '../api/generated/types.gen';
+import { mockApi, mockApiNetworkError, server } from '../test/mockApi.ts';
 import { renderApp } from '../test/renderApp.tsx';
 
 const INTRO = {
@@ -175,5 +175,112 @@ describe('Админка: типы встреч', () => {
       await within(form).findByText('Внутренняя ошибка сервера. Попробуйте позже'),
     ).toBeInTheDocument();
     expect(field('Идентификатор')).toHaveValue('call-30');
+  });
+});
+
+// Сервер отдаёт время в поясе владельца, а тесты идут в America/Los_Angeles: 09:00 по Алматы
+// 25 ноября там ещё 24 ноября, поэтому пересчёт в пояс браузера сдвинул бы и день, и часы
+const UPCOMING: Booking[] = [
+  {
+    id: '4f6c1c1e-1b7e-4d0a-9a51-2f0d3b8f7a10',
+    eventType: { id: 'call-30', title: 'Встреча 30 минут', durationMinutes: 30 },
+    start: '2026-11-24T17:30:00+05:00',
+    end: '2026-11-24T18:00:00+05:00',
+    guestName: 'Анна Смирнова',
+    guestEmail: 'anna@example.com',
+    createdAt: '2026-11-20T12:00:00+05:00',
+  },
+  {
+    id: '9a3e2d4b-6c1f-4e8a-b2d7-5f0e1a9c3b21',
+    eventType: { id: 'intro-15', title: 'Встреча 15 минут', durationMinutes: 15 },
+    start: '2026-11-25T09:00:00+05:00',
+    end: '2026-11-25T09:15:00+05:00',
+    guestName: 'Иван Петров',
+    guestEmail: 'ivan@example.com',
+    note: 'Обсудить проект',
+    createdAt: '2026-11-21T08:00:00+05:00',
+  },
+];
+
+function upcomingSection() {
+  return screen.getByRole('region', { name: 'Предстоящие бронирования' });
+}
+
+describe('Админка: предстоящие бронирования', () => {
+  it('should show bookings table in server order with owner time zone when there are bookings', async () => {
+    // given
+    server.use(
+      mockApi('bookingsList', 200, UPCOMING),
+      mockApi('ownerGet', 200, {
+        name: 'Эмир',
+        subtitle: 'Разработчик',
+        timeZone: 'Asia/Almaty',
+      }),
+    );
+
+    // when
+    renderApp('/admin');
+
+    // then
+    const table = await within(upcomingSection()).findByRole('table');
+    const rows = within(table)
+      .getAllByRole('row')
+      .map((row) =>
+        [...within(row).queryAllByRole('columnheader'), ...within(row).queryAllByRole('cell')].map(
+          (cell) => cell.textContent,
+        ),
+      );
+    expect(rows).toEqual([
+      ['Дата и время', 'Тип встречи', 'Имя', 'Email', 'Заметка'],
+      [
+        'вторник, 24 ноября, 17:30–18:00',
+        'Встреча 30 минут',
+        'Анна Смирнова',
+        'anna@example.com',
+        '—',
+      ],
+      [
+        'среда, 25 ноября, 09:00–09:15',
+        'Встреча 15 минут',
+        'Иван Петров',
+        'ivan@example.com',
+        'Обсудить проект',
+      ],
+    ]);
+    expect(
+      within(upcomingSection()).getByText('Время указано по Алматы (UTC+5)'),
+    ).toBeInTheDocument();
+  });
+
+  it('should show empty state when there are no upcoming bookings', async () => {
+    // given
+    server.use(mockApi('bookingsList', 200, []));
+
+    // when
+    renderApp('/admin');
+
+    // then
+    expect(
+      await within(upcomingSection()).findByText('Предстоящих бронирований нет'),
+    ).toBeInTheDocument();
+    expect(within(upcomingSection()).queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('should show connection error with retry when server is unreachable', async () => {
+    // given
+    server.use(mockApiNetworkError('bookingsList'));
+    const user = userEvent.setup();
+    renderApp('/admin');
+    const alert = await within(upcomingSection()).findByRole('alert');
+    expect(within(alert).getByText('Не удалось связаться с сервером')).toBeInTheDocument();
+
+    // when
+    server.use(mockApi('bookingsList', 200, UPCOMING));
+    await user.click(within(alert).getByRole('button', { name: 'Повторить' }));
+
+    // then
+    const table = await within(upcomingSection()).findByRole('table');
+    expect(within(table).getAllByRole('row')).toHaveLength(3);
+    expect(within(upcomingSection()).queryByRole('alert')).not.toBeInTheDocument();
   });
 });

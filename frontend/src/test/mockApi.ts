@@ -4,6 +4,9 @@ import type {
   BookingsCreateData,
   BookingsCreateErrors,
   BookingsCreateResponses,
+  BookingsListData,
+  BookingsListErrors,
+  BookingsListResponses,
   EventTypesCreateData,
   EventTypesCreateErrors,
   EventTypesCreateResponses,
@@ -57,6 +60,11 @@ interface ApiOperations {
     responses: BookingsCreateResponses;
     errors: BookingsCreateErrors;
   };
+  bookingsList: {
+    data: BookingsListData;
+    responses: BookingsListResponses;
+    errors: BookingsListErrors;
+  };
 }
 
 type OperationName = keyof ApiOperations;
@@ -74,6 +82,7 @@ const OPERATIONS: {
   eventTypesListSlots: { method: 'get', url: '/api/event-types/{id}/slots' },
   ownerGet: { method: 'get', url: '/api/owner' },
   bookingsCreate: { method: 'post', url: '/api/bookings' },
+  bookingsList: { method: 'get', url: '/api/bookings' },
 };
 
 // Hey API пишет параметры пути как `{id}`, MSW ждёт `:id`
@@ -113,4 +122,5 @@ export function mockApiNetworkError(name: OperationName): HttpHandler {
 export const server = setupServer(
   mockApi('eventTypesList', 200, []),
   mockApi('ownerGet', 200, { name: 'Владелец', subtitle: '', timeZone: 'Asia/Almaty' }),
+  mockApi('bookingsList', 200, []),
 );

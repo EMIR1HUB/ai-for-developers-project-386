@@ -1,5 +1,6 @@
-import { Container, Title } from '@mantine/core';
+import { Container, Stack, Title } from '@mantine/core';
 import { EventTypesSection } from './admin/EventTypesSection.tsx';
+import { UpcomingBookingsSection } from './admin/UpcomingBookingsSection.tsx';
 
 export function AdminPage() {
   return (
@@ -7,7 +8,10 @@ export function AdminPage() {
       <Title order={1} mb="lg">
         Админка
       </Title>
-      <EventTypesSection />
+      <Stack gap="xl">
+        <UpcomingBookingsSection />
+        <EventTypesSection />
+      </Stack>
     </Container>
   );
 }
