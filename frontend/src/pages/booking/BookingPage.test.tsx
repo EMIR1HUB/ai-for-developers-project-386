@@ -84,7 +84,7 @@ describe('Страница бронирования: выбор времени',
     expect(within(slotsColumn()).getAllByRole('button')).toHaveLength(3);
   });
 
-  it('should show taken slots as disabled and free slots as enabled', async () => {
+  it('should show taken slots as disabled and free slots as enabled when day is selected', async () => {
     // given
     mockBookingPage();
 
@@ -98,7 +98,7 @@ describe('Страница бронирования: выбор времени',
     expect(within(column).getByRole('button', { name: '10:00–10:30 Свободно' })).toBeEnabled();
   });
 
-  it('should show number of free slots for window days and disable days outside window', async () => {
+  it('should show free slot counts and disable days outside window when calendar is shown', async () => {
     // given
     mockBookingPage();
 

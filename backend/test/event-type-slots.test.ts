@@ -46,7 +46,7 @@ describe('GET /api/event-types/{id}/slots', () => {
     expect(slots.every((slot) => slot.available)).toBe(true);
   });
 
-  it('should mark slots overlapping existing booking of another type as taken', async () => {
+  it('should mark slots as taken when they overlap existing booking of another event type', async () => {
     // given: бронирование 10:00–11:00 типа «60 минут», слоты типа «30 минут»
     const store = storeWithEventType(30);
     store.addBooking({

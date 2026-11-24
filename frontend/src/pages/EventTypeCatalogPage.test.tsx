@@ -117,7 +117,7 @@ describe('Каталог типов встреч', () => {
     expect(screen.queryByRole('heading', { name: 'Выберите тип встречи' })).not.toBeInTheDocument();
   });
 
-  it('should show skeleton while event types are loading', async () => {
+  it('should show skeleton until event types arrive when catalog is opened', async () => {
     // given
     server.use(mockApi('eventTypesList', 200, [INTRO]));
 

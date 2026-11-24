@@ -91,7 +91,7 @@ describe('POST /api/bookings', () => {
     ]);
   });
 
-  it('should accept start in UTC or another offset and return it in owner time zone', async () => {
+  it('should return start in owner time zone when it is sent in UTC or another offset', async () => {
     // given
     const app = buildAppWithEventTypes();
 
