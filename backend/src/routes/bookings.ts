@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { AppContext } from '../app.ts';
 import { sendError } from '../errors.ts';
-import type { Booking, BookingsCreateResponse } from '../generated/types.gen.ts';
+import type {
+  Booking,
+  BookingsCreateResponse,
+  BookingsListResponse,
+} from '../generated/types.gen.ts';
 import { formatOwnerTime } from '../ownerTime.ts';
 import { findOfferedSlot, intervalsOverlap, type SlotRejection } from '../slots.ts';
 import type { StoredBooking } from '../store.ts';
@@ -43,6 +47,10 @@ export function toBookingResponse(booking: StoredBooking): Booking {
 }
 
 export function registerBookingRoutes(app: FastifyInstance, { store, now }: AppContext): void {
+  app.get('/api/bookings', async (): Promise<BookingsListResponse> =>
+    store.listUpcomingBookings(now()).map(toBookingResponse),
+  );
+
   app.post(
     '/api/bookings',
     async (request, reply): Promise<BookingsCreateResponse | FastifyReply> => {

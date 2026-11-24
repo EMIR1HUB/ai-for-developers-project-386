@@ -28,6 +28,11 @@ export interface Store {
   addEventType(eventType: EventType): void;
   /** Все бронирования всех типов встреч в порядке создания */
   listBookings(): StoredBooking[];
+  /**
+   * Предстоящие бронирования всех типов встреч по возрастанию начала: те, что ещё не закончились
+   * к моменту `now` (`end > now`), в том числе идущее прямо сейчас
+   */
+  listUpcomingBookings(now: Date): StoredBooking[];
   addBooking(booking: StoredBooking): void;
 }
 
@@ -43,6 +48,10 @@ export function createStore(): Store {
       eventTypes.set(eventType.id, eventType);
     },
     listBookings: () => [...bookings],
+    listUpcomingBookings: (now) =>
+      bookings
+        .filter((booking) => booking.end > now)
+        .sort((a, b) => a.start.getTime() - b.start.getTime()),
     addBooking: (booking) => {
       bookings.push(booking);
     },

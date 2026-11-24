@@ -9,6 +9,29 @@ tags:
   - name: Bookings
 paths:
   /api/bookings:
+    get:
+      operationId: Bookings_list
+      description: |-
+        Предстоящие бронирования всех типов встреч по возрастанию начала: те, что ещё не закончились
+        (`end` позже текущего момента), в том числе идущее прямо сейчас
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+        '500':
+          description: 'Ответ с ошибкой: статус и общее тело ошибки'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Bookings
     post:
       operationId: Bookings_create
       description: |-
