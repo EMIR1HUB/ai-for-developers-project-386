@@ -5,6 +5,7 @@
     ".github/workflows/hexlet-check.yml",
     "api/openapi.yaml",
     ".claude/skills/**",
-    "skills-lock.json"
+    "skills-lock.json",
+    "CHANGELOG.md"
   ]
 }

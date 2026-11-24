@@ -7,6 +7,9 @@ import type {
   EventTypesListData,
   EventTypesListErrors,
   EventTypesListResponses,
+  OwnerGetData,
+  OwnerGetErrors,
+  OwnerGetResponses,
 } from '../api/generated/types.gen';
 
 /**
@@ -25,6 +28,11 @@ interface ApiOperations {
     responses: EventTypesCreateResponses;
     errors: EventTypesCreateErrors;
   };
+  ownerGet: {
+    data: OwnerGetData;
+    responses: OwnerGetResponses;
+    errors: OwnerGetErrors;
+  };
 }
 
 type OperationName = keyof ApiOperations;
@@ -38,6 +46,7 @@ const OPERATIONS: {
 } = {
   eventTypesList: { method: 'get', url: '/api/event-types' },
   eventTypesCreate: { method: 'post', url: '/api/event-types' },
+  ownerGet: { method: 'get', url: '/api/owner' },
 };
 
 // Hey API пишет параметры пути как `{id}`, MSW ждёт `:id`
@@ -74,4 +83,7 @@ export function mockApiNetworkError(name: OperationName): HttpHandler {
  * Сеть по умолчанию: пустые ответы, чтобы страницы рендерились в любом тесте.
  * Тест переопределяет нужную операцию через `server.use(mockApi(...))`.
  */
-export const server = setupServer(mockApi('eventTypesList', 200, []));
+export const server = setupServer(
+  mockApi('eventTypesList', 200, []),
+  mockApi('ownerGet', 200, { name: 'Владелец', subtitle: '', timeZone: 'Asia/Almaty' }),
+);

@@ -64,7 +64,7 @@
 - До выбора стека нужно проверить, что для языка фронтенда есть генератор клиента из OpenAPI.
 - Серверные типы и маршруты генерируются, если фреймворк это поддерживает. Если нет, бэкенд пишется по контракту и проверяется тестами ([ADR-0001](docs/adr/0001-contract-first-typespec-hey-api.md)).
 - Ручки: `GET /api/owner`, `GET`/`POST /api/event-types`, `GET /api/event-types/{id}`, `GET /api/event-types/{id}/slots`, `GET /api/bookings` (предстоящие, по возрастанию начала), создание бронирования, `GET /api/health`. Списки — массивы без пагинации, типы встреч в порядке создания. Поля моделей — в [решении](https://github.com/EMIR1HUB/ai-for-developers-project-386/issues/5).
-- Профиль владельца (имя, подпись, часовой пояс) задан в конфиге бэкенда и отдаётся через `GET /api/owner`.
+- Профиль владельца (имя, подпись, часовой пояс) задан в конфиге бэкенда (`backend/src/ownerProfile.ts`) и отдаётся через `GET /api/owner`; аватар — статичная картинка фронтенда (`frontend/public/owner-avatar.svg`).
 - Идентификатор типа встречи задаёт владелец при создании: строчные латинские буквы, цифры и дефис, 3–50 символов (например, `intro-15`); занятый идентификатор — `409`. Страница гостя — `/book/<id>`. Бронированию идентификатор (UUID) назначает сервер ([решение](https://github.com/EMIR1HUB/ai-for-developers-project-386/issues/2)).
 - `GET /api/event-types/{id}/slots` возвращает все слоты окна записи с признаком занятости; число свободных слотов по дням считает фронтенд.
 - Ошибки передаются HTTP-статусами: `409` занятый слот, `422` валидация, `404` неизвестный тип встречи ([ADR-0003](docs/adr/0003-standard-http-status-codes.md)). Тело любой ошибки — `{ code, message, fields? }`: `code` из закрытого перечисления, `message` — русский текст для пользователя, `fields` (только в `422`) — все ошибочные поля `{ field, message }`. Нечитаемый JSON или тело не JSON-объект — `400`, неизвестный адрес `/api` — `404`, непредвиденная ошибка — `500` без деталей ([решение](https://github.com/EMIR1HUB/ai-for-developers-project-386/issues/4)).
@@ -74,7 +74,7 @@
 - **Контракт:** TypeSpec (`api/main.tsp`) → OpenAPI 3.1 (`api/openapi.yaml`, коммитится).
 - **Бэкенд** (`backend/`): Node.js 24 + Fastify, TypeScript запускается напрямую (type stripping). Типы контракта генерирует Hey API.
 - **Фронтенд** (`frontend/`): Vite + React + Mantine. Клиентский SDK генерирует Hey API.
-- **Тесты:** Vitest. **Линтеры:** oxlint, oxfmt, actionlint. **Коммиты:** Conventional Commits, проверяет commitlint.
+- **Тесты:** Vitest. **Линтеры:** oxlint, oxfmt, actionlint. **Коммиты:** Conventional Commits, проверяет commitlint. **Релизы:** release-please.
 - **Окружение:** mise (версии инструментов, задачи, dev-серверы через daemons), git-хуки через hk.
 
 ## Установка
@@ -100,6 +100,20 @@ mise install
 | `mise run check`                       | Все проверки: линтеры, типы, тесты. Эту же команду запускает CI на каждый push                       |
 | `mise run lint` / `typecheck` / `test` | Проверки по отдельности                                                                              |
 | `mise run format`                      | Автоисправление линтеров и форматирование                                                            |
+
+## Релизы
+
+Релизы выпускает [release-please](https://github.com/googleapis/release-please) (`.github/workflows/release-please.yml`) по Conventional Commits. Версия одна на весь репозиторий.
+
+1. После каждого push в `main` release-please открывает или обновляет релизный PR `chore(main): release X.Y.Z`. В нём следующая версия, новые записи `CHANGELOG.md`, версия в корневом `package.json`, `package-lock.json` и `.release-please-manifest.json`.
+2. Версию определяют коммиты после прошлого релиза: `fix:` даёт patch, `feat:` даёт minor. Пока версия ниже `1.0.0`, ломающее изменение (`feat!:`) тоже даёт minor. Если есть только `docs:`, `chore:`, `test:`, `refactor:`, релизный PR не появляется. Коммиты не по Conventional Commits пропускаются.
+3. Слияние релизного PR ставит тег `vX.Y.Z` и создаёт GitHub Release с тем же changelog.
+
+Настройки лежат в `release-please-config.json`: стартовая версия `0.1.0` (в манифесте), changelog собирается из коммитов после `bootstrap-sha`. `CHANGELOG.md` и `.release-please-manifest.json` руками не правят. PR лучше вливать squash-merge с заголовком по Conventional Commits: заголовок станет коммитом в `main` и строкой changelog, а хук commitlint коммиты, созданные на GitHub, не проверяет.
+
+**Ограничение CI на релизном PR.** Релизный PR создаётся от имени `GITHUB_TOKEN`, а события от этого токена не запускают другие workflows. Поэтому `ci.yml` на релизном PR сам не запускается, и проверок у него нет. В нём меняются только `CHANGELOG.md`, версии и манифест, а CI отработает на `main` после слияния. Если проверки на релизном PR понадобятся, нужен fine-grained PAT в секрете и вход `token:` у action.
+
+**Разовая настройка владельцем.** Без неё `GITHUB_TOKEN` не может создать PR и workflow упадёт: Settings → Actions → General → Workflow permissions → включить «Allow GitHub Actions to create and approve pull requests».
 
 ---
 

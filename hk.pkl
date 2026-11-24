@@ -9,12 +9,14 @@ local linters = new Mapping {
     }
     ["oxfmt"] = (Builtins.oxfmt) {
         // Сгенерированные и сторонние файлы не форматируем: workflow Хекслета,
-        // OpenAPI из TypeSpec, скиллы из mattpocock/skills (обновляются `npx skills update`)
+        // OpenAPI из TypeSpec, скиллы из mattpocock/skills (обновляются `npx skills update`),
+        // CHANGELOG.md пишет release-please в своём формате
         exclude = List(
             ".github/workflows/hexlet-check.yml",
             "api/openapi.yaml",
             ".claude/skills/**",
-            "skills-lock.json"
+            "skills-lock.json",
+            "CHANGELOG.md"
         )
     }
 }

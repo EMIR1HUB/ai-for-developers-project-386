@@ -30,7 +30,7 @@ describe('Шапка', () => {
 
     // then
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Каталог типов встреч' }),
+      await screen.findByRole('heading', { level: 1, name: 'Выберите тип встречи' }),
     ).toBeInTheDocument();
   });
 
