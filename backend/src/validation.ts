@@ -1,5 +1,6 @@
 import { ApiFailure } from './errors.ts';
 import type { FieldError } from './generated/types.gen.ts';
+import { MINUTE_MS } from './ownerTime.ts';
 
 export const MALFORMED_BODY_MESSAGE = 'Тело запроса должно быть JSON-объектом';
 const VALIDATION_MESSAGE = 'Поля заполнены неверно';
@@ -16,7 +17,6 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // ISO 8601 с обязательным смещением или `Z`: без смещения момент неоднозначен (спецификация #11, «Время»)
 const OFFSET_DATE_TIME_PATTERN =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(?<offset>Z|(?<sign>[+-])(?<hours>\d{2}):(?<minutes>\d{2}))$/;
-const MINUTE_MS = 60 * 1000;
 
 /** Момент из ISO 8601 со смещением; `undefined`, если формат не тот или такого времени нет в календаре */
 function parseOffsetDateTime(value: string): Date | undefined {

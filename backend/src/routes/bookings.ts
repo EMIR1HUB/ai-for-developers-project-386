@@ -1,26 +1,38 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { AppContext } from '../app.ts';
-import { sendError } from '../errors.ts';
+import { EVENT_TYPE_NOT_FOUND_MESSAGE, sendError } from '../errors.ts';
 import type {
   Booking,
   BookingsCreateResponse,
   BookingsListResponse,
 } from '../generated/types.gen.ts';
-import { formatOwnerTime } from '../ownerTime.ts';
-import { findOfferedSlot, intervalsOverlap, type SlotRejection } from '../slots.ts';
+import { formatOwnerInterval, formatOwnerTime } from '../ownerTime.ts';
+import {
+  BOOKING_WINDOW_DAYS,
+  findOfferedSlot,
+  intervalsOverlap,
+  SLOT_STEP_MINUTES,
+  WORKING_DAY_END_MINUTES,
+  WORKING_DAY_START_MINUTES,
+  type SlotRejection,
+} from '../slots.ts';
 import type { StoredBooking } from '../store.ts';
-import { EVENT_TYPE_NOT_FOUND_MESSAGE } from './eventTypes.ts';
 import { parseBody, type FieldReader } from '../validation.ts';
 
 const SLOT_TAKEN_MESSAGE = 'Это время уже заняли. Выберите другой слот';
 
+/** Минуты от начала дня в виде `09:00` */
+function clock(minutes: number): string {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+}
+
 const SLOT_NOT_OFFERED_MESSAGES: Record<SlotRejection, string> = {
   started: 'Это время уже прошло. Выберите другой слот',
-  outsideWindow:
-    'Это время вне окна записи: бронировать можно на 14 дней вперёд. Выберите другой слот',
-  offGrid: 'Встреча начинается только в начале слота, каждые 15 минут. Выберите другой слот',
-  outsideWorkingHours: 'Это время вне рабочих часов 09:00–18:00. Выберите другой слот',
+  outsideWindow: `Это время вне окна записи: бронировать можно на ${BOOKING_WINDOW_DAYS} дней вперёд. Выберите другой слот`,
+  offGrid: `Встреча начинается только в начале слота, каждые ${SLOT_STEP_MINUTES} минут. Выберите другой слот`,
+  outsideWorkingHours: `Это время вне рабочих часов ${clock(WORKING_DAY_START_MINUTES)}–${clock(WORKING_DAY_END_MINUTES)}. Выберите другой слот`,
 };
 
 function readNewBooking(fields: FieldReader) {
@@ -37,8 +49,7 @@ export function toBookingResponse(booking: StoredBooking): Booking {
   return {
     id: booking.id,
     eventType: booking.eventType,
-    start: formatOwnerTime(booking.start),
-    end: formatOwnerTime(booking.end),
+    ...formatOwnerInterval(booking),
     guestName: booking.guestName,
     guestEmail: booking.guestEmail,
     ...(booking.note === undefined ? {} : { note: booking.note }),

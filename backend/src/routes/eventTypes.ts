@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { AppContext } from '../app.ts';
-import { sendError } from '../errors.ts';
+import { EVENT_TYPE_NOT_FOUND_MESSAGE, sendError } from '../errors.ts';
 import type {
   EventType,
   EventTypesCreateResponse,
@@ -10,15 +10,13 @@ import type {
   EventTypesListSlotsData,
   EventTypesListSlotsResponse,
 } from '../generated/types.gen.ts';
-import { formatOwnerTime } from '../ownerTime.ts';
+import { formatOwnerInterval } from '../ownerTime.ts';
 import { computeSlots } from '../slots.ts';
 import { parseBody, type FieldReader } from '../validation.ts';
 
 // Строчные латинские буквы и цифры, группы через одиночный дефис: дефис не в начале,
 // не в конце и не подряд (спецификация #11, «Модели»)
 const EVENT_TYPE_ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-
-export const EVENT_TYPE_NOT_FOUND_MESSAGE = 'Тип встречи не найден';
 
 function readNewEventType(fields: FieldReader): EventType {
   return {
@@ -77,8 +75,7 @@ export function registerEventTypeRoutes(app: FastifyInstance, { store, now }: Ap
         return sendError(reply, 'EVENT_TYPE_NOT_FOUND', EVENT_TYPE_NOT_FOUND_MESSAGE);
       }
       return computeSlots(eventType, store.listBookings(), now()).map((slot) => ({
-        start: formatOwnerTime(slot.start),
-        end: formatOwnerTime(slot.end),
+        ...formatOwnerInterval(slot),
         available: slot.available,
       }));
     },

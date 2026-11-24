@@ -1,13 +1,13 @@
 import type { EventType } from './generated/types.gen.ts';
-import { ownerDateOf, ownerMoment } from './ownerTime.ts';
+import { MINUTE_MS, ownerDateOf, ownerMoment } from './ownerTime.ts';
 
 /** Окно записи: сегодня по поясу владельца и ещё 13 дней */
 export const BOOKING_WINDOW_DAYS = 14;
 /** Рабочие часы владельца 09:00–18:00 каждый день, в минутах от начала дня */
-const WORKING_DAY_START_MINUTES = 9 * 60;
-const WORKING_DAY_END_MINUTES = 18 * 60;
+export const WORKING_DAY_START_MINUTES = 9 * 60;
+export const WORKING_DAY_END_MINUTES = 18 * 60;
 /** Шаг начала слотов одинаковый для всех типов встреч */
-const SLOT_STEP_MINUTES = 15;
+export const SLOT_STEP_MINUTES = 15;
 
 /** Полуоткрытый интервал времени `[start, end)` */
 export interface TimeInterval {
@@ -68,8 +68,6 @@ export function computeSlots(
 
 /** Почему начало не совпадает ни с одним предлагаемым слотом */
 export type SlotRejection = 'started' | 'outsideWindow' | 'offGrid' | 'outsideWorkingHours';
-
-const MINUTE_MS = 60 * 1000;
 
 function rejectionOf(start: Date, now: Date): SlotRejection {
   if (start <= now) {

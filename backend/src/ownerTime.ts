@@ -5,7 +5,7 @@
  */
 export const OWNER_UTC_OFFSET = '+05:00';
 
-const MINUTE_MS = 60 * 1000;
+export const MINUTE_MS = 60 * 1000;
 const OWNER_OFFSET_MS = 5 * 60 * MINUTE_MS;
 
 /** Календарная дата по поясу владельца, месяц с нуля, как в `Date.UTC` */
@@ -37,4 +37,12 @@ export function ownerMoment({ year, month, day }: OwnerDate, minutes: number): D
 export function formatOwnerTime(moment: Date): string {
   const shifted = new Date(moment.getTime() + OWNER_OFFSET_MS);
   return `${shifted.toISOString().slice(0, 19)}${OWNER_UTC_OFFSET}`;
+}
+
+/** `start` и `end` интервала в формате API, остальные поля (`available` и т. п.) не копируются */
+export function formatOwnerInterval(interval: { start: Date; end: Date }): {
+  start: string;
+  end: string;
+} {
+  return { start: formatOwnerTime(interval.start), end: formatOwnerTime(interval.end) };
 }

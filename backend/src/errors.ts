@@ -14,6 +14,9 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   INTERNAL_ERROR: 500,
 };
 
+/** Одно сообщение для ручек, которые ищут тип встречи по идентификатору (`404 EVENT_TYPE_NOT_FOUND`) */
+export const EVENT_TYPE_NOT_FOUND_MESSAGE = 'Тип встречи не найден';
+
 /**
  * Отказ в общей схеме, который можно бросить из маршрута или помощника (например, из `parseBody`).
  * Общий обработчик ошибок приложения отправляет его через `sendError`.
