@@ -36,6 +36,7 @@
 
 - Коммиты пишутся по Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`). Хук commit-msg проверяет их через commitlint.
 - Коммит ссылается на тикет GitHub Issues в футере сообщения: `Refs #N` для промежуточных коммитов, `Closes #N` для коммита, который завершает тикет (тикет закроется, когда коммит попадёт в `main`). Номер тикета берётся из задачи, по которой идёт работа.
+- Релизы выпускает release-please (README.md, раздел «Релизы»). `CHANGELOG.md` и `.release-please-manifest.json` руками не править. Заголовок PR в `main` пишется по Conventional Commits: при squash-merge он становится коммитом и строкой changelog.
 - `.github/workflows/hexlet-check.yml` не редактировать и не переименовывать.
 - Доменные понятия называй терминами из [GLOSSARY.md](GLOSSARY.md), архитектурные решения лежат в `docs/adr/`.
 
