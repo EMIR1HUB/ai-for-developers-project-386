@@ -15,7 +15,7 @@ export interface TimeInterval {
   end: Date;
 }
 
-/** Слот окна записи. `available: false` — слот пересекается с бронированием */
+/** Слот окна записи. `available: false` — слот уже начался или пересекается с бронированием */
 export interface Slot extends TimeInterval {
   available: boolean;
 }
@@ -29,12 +29,12 @@ export function intervalsOverlap(a: TimeInterval, b: TimeInterval): boolean {
 }
 
 /**
- * Слоты окна записи для типа встречи. Слот целиком лежит в рабочих часах; слоты, которые уже
- * начались (начало не строго позже `now`), не предлагаются и в результат не попадают.
- * Слот занят, если пересекается с бронированием любого типа встречи.
+ * Все слоты окна записи для типа встречи. Слот целиком лежит в рабочих часах. Слот доступен,
+ * только если его начало строго позже `now` и он не пересекается с бронированием любого типа
+ * встречи; начавшиеся слоты остаются в списке с `available: false`.
  *
- * Эту же функцию использует проверка при создании бронирования: сервер принимает
- * только начало слота из этого списка.
+ * Эту же функцию использует проверка при создании бронирования (`findOfferedSlot`): сервер
+ * принимает только начало слота из этого списка, которое ещё не наступило.
  */
 export function computeSlots(
   eventType: Pick<EventType, 'durationMinutes'>,
@@ -52,13 +52,10 @@ export function computeSlots(
       startMinutes += SLOT_STEP_MINUTES
     ) {
       const start = ownerMoment(day, startMinutes);
-      if (start <= now) {
-        continue;
-      }
       const slot = { start, end: ownerMoment(day, startMinutes + eventType.durationMinutes) };
       slots.push({
         ...slot,
-        available: !bookings.some((booking) => intervalsOverlap(slot, booking)),
+        available: start > now && !bookings.some((booking) => intervalsOverlap(slot, booking)),
       });
     }
   }
@@ -88,18 +85,19 @@ function rejectionOf(start: Date, now: Date): SlotRejection {
 /**
  * Слот, который ручка слотов сейчас предлагает с этим началом, занятый или свободный, либо причина,
  * почему такого слота нет. Слот берётся из `computeSlots`, поэтому сервер принимает ровно
- * те начала, что показывает гостю; занятость проверяет вызывающий код.
+ * те начала, что показывает гостю; начавшийся слот не предлагается (`started`). Занятость
+ * проверяет вызывающий код.
  */
 export function findOfferedSlot(
   eventType: Pick<EventType, 'durationMinutes'>,
   start: Date,
   now: Date,
 ): { slot: TimeInterval } | { rejection: SlotRejection } {
-  // Набор предлагаемых начал от бронирований не зависит: занятые слоты тоже показываются
+  // Без бронирований `available` означает только «ещё не началось»: занятые слоты тоже предлагаются
   const slot = computeSlots(eventType, [], now).find(
     (candidate) => candidate.start.getTime() === start.getTime(),
   );
-  return slot
+  return slot?.available
     ? { slot: { start: slot.start, end: slot.end } }
     : { rejection: rejectionOf(start, now) };
 }

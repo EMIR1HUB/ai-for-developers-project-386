@@ -31,19 +31,27 @@ describe('GET /api/event-types/{id}/slots', () => {
     // then
     expect(response.statusCode).toBe(200);
     const slots = expectResponseToMatchContract(response, 'EventTypes_listSlots') as SlotBody[];
-    // 24 ноября: 10:15…14:00 — 16 слотов; 25 ноября – 7 декабря: 09:00…14:00 — по 21 слоту
-    expect(slots).toHaveLength(16 + 13 * 21);
+    // Каждый из 14 дней окна: старты 09:00…14:00 — по 21 слоту, включая уже начавшиеся сегодня
+    expect(slots).toHaveLength(14 * 21);
     expect(slots[0]).toEqual({
-      start: '2026-11-24T10:15:00+05:00',
-      end: '2026-11-24T14:15:00+05:00',
-      available: true,
+      start: '2026-11-24T09:00:00+05:00',
+      end: '2026-11-24T13:00:00+05:00',
+      available: false,
     });
     expect(slots.at(-1)).toEqual({
       start: '2026-12-07T14:00:00+05:00',
       end: '2026-12-07T18:00:00+05:00',
       available: true,
     });
-    expect(slots.every((slot) => slot.available)).toBe(true);
+    // Начавшиеся слоты (09:00…10:00 сегодня, включая начавшийся ровно сейчас) недоступны, остальные свободны
+    const unavailable = slots.filter((slot) => !slot.available).map((slot) => slot.start);
+    expect(unavailable).toEqual([
+      '2026-11-24T09:00:00+05:00',
+      '2026-11-24T09:15:00+05:00',
+      '2026-11-24T09:30:00+05:00',
+      '2026-11-24T09:45:00+05:00',
+      '2026-11-24T10:00:00+05:00',
+    ]);
   });
 
   it('should mark slots as taken when they overlap existing booking of another event type', async () => {

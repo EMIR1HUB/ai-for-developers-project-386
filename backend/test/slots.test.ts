@@ -48,18 +48,29 @@ describe('Расчёт слотов', () => {
     expect(slotsOfDay(slots, '2026-11-25').slice(-2)).toEqual(['16:45–17:45', '17:00–18:00']);
   });
 
-  it('should not offer slot starting exactly now and offer the next one when now is on the grid', () => {
+  it('should list started slots as unavailable and slot starting exactly now as unavailable when now is on the grid', () => {
     // given
     const now = at('2026-11-24T10:00');
 
     // when
     const slots = computeSlots({ durationMinutes: 15 }, [], now);
 
-    // then
+    // then: день окна начинается с 09:00; слот, начавшийся ровно «сейчас», уже не доступен
+    const morning = slots
+      .filter(
+        (slot) => slot.start >= at('2026-11-24T09:30') && slot.start <= at('2026-11-24T10:15'),
+      )
+      .map((slot) => [hhmm(slot.start), slot.available]);
+    expect(morning).toEqual([
+      ['09:30', false],
+      ['09:45', false],
+      ['10:00', false],
+      ['10:15', true],
+    ]);
     expect(slots[0]).toEqual({
-      start: at('2026-11-24T10:15'),
-      end: at('2026-11-24T10:30'),
-      available: true,
+      start: at('2026-11-24T09:00'),
+      end: at('2026-11-24T09:15'),
+      available: false,
     });
   });
 
