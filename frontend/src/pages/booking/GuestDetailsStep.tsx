@@ -3,7 +3,7 @@ import { useId, useState, type FormEvent } from 'react';
 import { fieldErrors, isApiError, type FieldErrors } from '../../api/errors.ts';
 import { bookingsCreate } from '../../api/generated/sdk.gen';
 import type { Booking, EventType, OwnerProfile, Slot } from '../../api/generated/types.gen';
-import { LoadErrorAlert } from '../../components/LoadErrorAlert.tsx';
+import { ErrorAlert } from '../../components/ErrorAlert.tsx';
 import { EventTypeSummary } from './EventTypeSummary.tsx';
 
 /** Данные гостя в форме. Их хранит страница, чтобы они пережили возврат к выбору времени */
@@ -86,7 +86,7 @@ export function GuestDetailsStep({
                 Ваши данные
               </Title>
               {submitError !== null && (
-                <LoadErrorAlert
+                <ErrorAlert
                   title="Не удалось создать бронирование"
                   error={submitError}
                   onRetry={() => void submit()}

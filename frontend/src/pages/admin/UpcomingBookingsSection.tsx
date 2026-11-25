@@ -3,8 +3,9 @@ import { useId } from 'react';
 import { bookingsList, ownerGet } from '../../api/generated/sdk.gen';
 import type { Booking } from '../../api/generated/types.gen';
 import { useApiQuery } from '../../api/useApiQuery.ts';
-import { LoadErrorAlert } from '../../components/LoadErrorAlert.tsx';
-import { formatDayLong, formatTimeRange, ownerDate, timeZoneLabel } from '../../ownerTime.ts';
+import { ErrorAlert } from '../../components/ErrorAlert.tsx';
+import { TimeZoneNote } from '../../components/TimeZoneNote.tsx';
+import { formatDayLong, formatTimeRange, ownerDate } from '../../ownerTime.ts';
 
 const SKELETON_ROWS = 3;
 // Ширина, ниже которой таблица не сжимается, а прокручивается по горизонтали (телефон)
@@ -75,7 +76,7 @@ export function UpcomingBookingsSection() {
         </Stack>
       )}
       {upcoming.status === 'error' && (
-        <LoadErrorAlert
+        <ErrorAlert
           title="Не удалось загрузить бронирования"
           error={upcoming.error}
           onRetry={upcoming.retry}
@@ -86,9 +87,7 @@ export function UpcomingBookingsSection() {
           <Text c="dimmed">Предстоящих бронирований нет</Text>
         ) : (
           <Stack gap="xs">
-            <Text size="sm" c="dimmed">
-              Время указано по {timeZoneLabel(upcoming.data.owner.timeZone)}
-            </Text>
+            <TimeZoneNote timeZone={upcoming.data.owner.timeZone} />
             <BookingsTable bookings={upcoming.data.bookings} labelledBy={headingId} />
           </Stack>
         ))}

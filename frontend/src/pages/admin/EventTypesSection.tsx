@@ -1,22 +1,11 @@
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Group,
-  SimpleGrid,
-  Skeleton,
-  Stack,
-  Text,
-  Title,
-} from '@mantine/core';
-import { IconAlertCircle, IconClock } from '@tabler/icons-react';
+import { Card, Group, SimpleGrid, Skeleton, Stack, Text, Title } from '@mantine/core';
 import { useId } from 'react';
-import { errorMessage } from '../../api/errors.ts';
 import { eventTypesList } from '../../api/generated/sdk.gen';
 import type { EventType } from '../../api/generated/types.gen';
-import { useApiQuery, type QueryState } from '../../api/useApiQuery.ts';
-import { paths } from '../../paths.ts';
+import { useApiQuery, type QueryResult } from '../../api/useApiQuery.ts';
+import { DurationBadge } from '../../components/DurationBadge.tsx';
+import { ErrorAlert } from '../../components/ErrorAlert.tsx';
+import { bookingPath } from '../../paths.ts';
 import { EventTypeForm } from './EventTypeForm.tsx';
 
 const SKELETON_ITEMS = 2;
@@ -28,12 +17,10 @@ function EventTypeItem({ eventType }: { eventType: EventType }) {
         <Title order={3} size="h5">
           {eventType.title}
         </Title>
-        <Badge variant="light" color="orange" leftSection={<IconClock size={12} />}>
-          {eventType.durationMinutes} мин
-        </Badge>
+        <DurationBadge minutes={eventType.durationMinutes} />
       </Group>
       <Text size="sm" ff="monospace" c="dimmed">
-        {`${paths.catalog}/${eventType.id}`}
+        {bookingPath(eventType.id)}
       </Text>
       {eventType.description && (
         <Text size="sm" mt={4}>
@@ -44,7 +31,7 @@ function EventTypeItem({ eventType }: { eventType: EventType }) {
   );
 }
 
-function EventTypeList({ query }: { query: QueryState<EventType[]> & { retry: () => void } }) {
+function EventTypeList({ query }: { query: QueryResult<EventType[]> }) {
   if (query.status === 'loading') {
     return (
       <Stack gap="sm" role="status" aria-label="Загрузка типов встреч">
@@ -59,19 +46,11 @@ function EventTypeList({ query }: { query: QueryState<EventType[]> & { retry: ()
   }
   if (query.status === 'error') {
     return (
-      <Alert
-        color="red"
-        variant="light"
+      <ErrorAlert
         title="Не удалось загрузить типы встреч"
-        icon={<IconAlertCircle />}
-      >
-        <Stack gap="sm" align="flex-start">
-          <Text size="sm">{errorMessage(query.error)}</Text>
-          <Button variant="light" color="red" size="xs" onClick={query.retry}>
-            Повторить
-          </Button>
-        </Stack>
-      </Alert>
+        error={query.error}
+        onRetry={query.retry}
+      />
     );
   }
   if (query.data.length === 0) {

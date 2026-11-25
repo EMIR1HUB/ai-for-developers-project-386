@@ -1,20 +1,11 @@
-import {
-  Badge,
-  Card,
-  Container,
-  Group,
-  SimpleGrid,
-  Skeleton,
-  Stack,
-  Text,
-  Title,
-} from '@mantine/core';
-import { IconCalendarOff, IconClock } from '@tabler/icons-react';
+import { Card, Container, Group, SimpleGrid, Skeleton, Stack, Text, Title } from '@mantine/core';
+import { IconCalendarOff } from '@tabler/icons-react';
 import { Link } from 'react-router';
 import { eventTypesList, ownerGet } from '../api/generated/sdk.gen';
 import type { EventType, OwnerProfile } from '../api/generated/types.gen';
 import { useApiQuery } from '../api/useApiQuery.ts';
-import { LoadErrorAlert } from '../components/LoadErrorAlert.tsx';
+import { DurationBadge } from '../components/DurationBadge.tsx';
+import { ErrorAlert } from '../components/ErrorAlert.tsx';
 import { OwnerAvatar } from '../components/OwnerAvatar.tsx';
 import { bookingPath } from '../paths.ts';
 
@@ -60,7 +51,7 @@ function OwnerSection() {
       return <OwnerSkeleton />;
     case 'error':
       return (
-        <LoadErrorAlert
+        <ErrorAlert
           title="Не удалось загрузить профиль владельца"
           error={owner.error}
           onRetry={owner.retry}
@@ -88,9 +79,7 @@ function EventTypeCard({ eventType }: { eventType: EventType }) {
           <Title order={3} size="h4">
             {eventType.title}
           </Title>
-          <Badge variant="light" color="orange" leftSection={<IconClock size={12} />}>
-            {eventType.durationMinutes} мин
-          </Badge>
+          <DurationBadge minutes={eventType.durationMinutes} />
         </Group>
         <Text c="dimmed" size="sm">
           {eventType.description}
@@ -138,7 +127,7 @@ function EventTypeList() {
       return <EventTypeSkeletons />;
     case 'error':
       return (
-        <LoadErrorAlert
+        <ErrorAlert
           title="Не удалось загрузить типы встреч"
           error={eventTypes.error}
           onRetry={eventTypes.retry}

@@ -1,6 +1,7 @@
-import { Badge, Card, Divider, Group, Stack, Text, Title } from '@mantine/core';
+import { Card, Divider, Group, Stack, Text, Title } from '@mantine/core';
 import { IconCalendarEvent, IconClock } from '@tabler/icons-react';
 import type { EventType, OwnerProfile, Slot } from '../../api/generated/types.gen';
+import { DurationBadge } from '../../components/DurationBadge.tsx';
 import { OwnerAvatar } from '../../components/OwnerAvatar.tsx';
 import { formatDayLong, formatTimeRange, ownerDate } from '../../ownerTime.ts';
 
@@ -24,14 +25,7 @@ export function EventTypeSummary({
         <Title order={1} size="h3">
           {eventType.title}
         </Title>
-        <Badge
-          variant="light"
-          color="orange"
-          leftSection={<IconClock size={12} />}
-          style={{ alignSelf: 'flex-start' }}
-        >
-          {eventType.durationMinutes} мин
-        </Badge>
+        <DurationBadge minutes={eventType.durationMinutes} style={{ alignSelf: 'flex-start' }} />
         {eventType.description && (
           <Text c="dimmed" size="sm">
             {eventType.description}

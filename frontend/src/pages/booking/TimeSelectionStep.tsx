@@ -1,9 +1,9 @@
 import { Button, Card, Grid, Group, Skeleton, Stack, Text } from '@mantine/core';
 import { Link } from 'react-router';
 import type { EventType, OwnerProfile, Slot } from '../../api/generated/types.gen';
-import type { QueryState } from '../../api/useApiQuery.ts';
-import { LoadErrorAlert } from '../../components/LoadErrorAlert.tsx';
-import { timeZoneLabel } from '../../ownerTime.ts';
+import type { QueryResult } from '../../api/useApiQuery.ts';
+import { ErrorAlert } from '../../components/ErrorAlert.tsx';
+import { TimeZoneNote } from '../../components/TimeZoneNote.tsx';
 import { paths } from '../../paths.ts';
 import { DaySlots } from './DaySlots.tsx';
 import { EventTypeSummary } from './EventTypeSummary.tsx';
@@ -89,7 +89,7 @@ export function TimeSelectionStep({
 }: {
   eventType: EventType;
   owner: OwnerProfile;
-  slots: QueryState<Slot[]> & { retry: () => void };
+  slots: QueryResult<Slot[]>;
   selectedDay: string | null;
   onSelectDay: (day: string) => void;
   selectedSlot: Slot | null;
@@ -106,7 +106,7 @@ export function TimeSelectionStep({
           <Stack gap="sm">
             {slots.status === 'loading' && <SlotsSkeleton />}
             {slots.status === 'error' && (
-              <LoadErrorAlert
+              <ErrorAlert
                 title="Не удалось загрузить слоты"
                 error={slots.error}
                 onRetry={slots.retry}
@@ -121,9 +121,7 @@ export function TimeSelectionStep({
                 onSelectSlot={onSelectSlot}
               />
             )}
-            <Text size="sm" c="dimmed">
-              Время указано по {timeZoneLabel(owner.timeZone)}
-            </Text>
+            <TimeZoneNote timeZone={owner.timeZone} />
           </Stack>
         </Grid.Col>
       </Grid>

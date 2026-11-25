@@ -5,15 +5,15 @@ export type QueryState<T> =
   | { status: 'error'; error: unknown }
   | { status: 'success'; data: T };
 
+/** Результат `useApiQuery`: состояние загрузки и `retry`, который повторяет запрос */
+export type QueryResult<T> = QueryState<T> & { retry: () => void };
+
 /**
  * Загружает данные при открытии страницы и при смене `deps`, без кэша (спецификация #11).
  * `load` вызывает SDK с `throwOnError: true`: ошибка API или сети попадает в состояние `error`.
  * `retry` повторяет загрузку.
  */
-export function useApiQuery<T>(
-  load: () => Promise<T>,
-  deps: readonly unknown[],
-): QueryState<T> & { retry: () => void } {
+export function useApiQuery<T>(load: () => Promise<T>, deps: readonly unknown[]): QueryResult<T> {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<{ key: string; state: QueryState<T> } | null>(null);
   // Ключ запроса: пока ответ на текущий ключ не пришёл, состояние — загрузка

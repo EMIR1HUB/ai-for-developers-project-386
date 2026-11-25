@@ -6,7 +6,7 @@ import { isApiError } from '../../api/errors.ts';
 import { eventTypesGet, eventTypesListSlots, ownerGet } from '../../api/generated/sdk.gen';
 import type { Booking, Slot } from '../../api/generated/types.gen';
 import { useApiQuery } from '../../api/useApiQuery.ts';
-import { LoadErrorAlert } from '../../components/LoadErrorAlert.tsx';
+import { ErrorAlert } from '../../components/ErrorAlert.tsx';
 import { paths } from '../../paths.ts';
 import { ConfirmationStep } from './ConfirmationStep.tsx';
 import { GuestDetailsStep, type GuestValues } from './GuestDetailsStep.tsx';
@@ -93,7 +93,7 @@ function BookingFlow({ eventTypeId }: { eventTypeId: string }) {
       <Stack gap="lg">
         {details.status === 'loading' && <BookingPageSkeleton />}
         {details.status === 'error' && (
-          <LoadErrorAlert
+          <ErrorAlert
             title="Не удалось загрузить тип встречи"
             error={details.error}
             onRetry={details.retry}

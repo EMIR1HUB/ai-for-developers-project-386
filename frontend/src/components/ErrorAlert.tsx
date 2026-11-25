@@ -2,8 +2,11 @@ import { Alert, Button, Stack, Text } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
 import { errorMessage } from '../api/errors.ts';
 
-/** Ошибка загрузки данных страницы: текст сервера или сообщение о недоступности и «Повторить» */
-export function LoadErrorAlert({
+/**
+ * Ошибка загрузки данных или отправки формы: текст сервера или сообщение о недоступности
+ * сервера и «Повторить», которое повторяет неудавшееся действие
+ */
+export function ErrorAlert({
   title,
   error,
   onRetry,
