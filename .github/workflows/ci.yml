@@ -52,3 +52,43 @@ jobs:
             e2e/playwright-report/
             e2e/test-results/
           retention-days: 7
+
+  # Образ из Dockerfile собирается и стартует так же, как будет на хостинге: порт из PORT,
+  # без базы данных и других внешних сервисов. В реестр образ не публикуется
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - run: docker build --tag calendar:ci .
+
+      # Порт 8080 вместо порта по умолчанию (3000) проверяет, что приложение слушает именно PORT
+      - name: Start container
+        run: docker run --detach --name calendar --env PORT=8080 --publish 8080:8080 calendar:ci
+
+      - name: Check container responds
+        run: |
+          set -euo pipefail
+          base=http://127.0.0.1:8080
+
+          # Старт занимает секунды: ждём, пока /api/health ответит
+          curl --fail --silent --show-error --retry 20 --retry-delay 1 --retry-connrefused \
+            "$base/api/health" | grep --fixed-strings '"status":"ok"'
+
+          # Фронтенд раздаёт сам сервер: главная страница и адрес SPA получают index.html
+          curl --fail --silent "$base/" | grep --fixed-strings '<div id="root">'
+          curl --fail --silent "$base/book/intro-15" | grep --fixed-strings '<div id="root">'
+
+          # Неизвестный адрес под /api отвечает JSON, а не index.html
+          status="$(curl --silent --output /tmp/not-found.json --write-out '%{http_code}' "$base/api/no-such-route")"
+          test "$status" = 404
+          grep --fixed-strings '"code":"NOT_FOUND"' /tmp/not-found.json
+
+          # Демо-типы встреч создаются при старте (DEMO_DATA включён по умолчанию)
+          curl --fail --silent "$base/api/event-types" | grep --fixed-strings '"id":"intro-15"'
+
+      - name: Container logs
+        if: always()
+        run: docker logs calendar
