@@ -16,5 +16,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: './vitest.setup.ts',
+    // Время показывается из строки ответа без пересчёта в пояс браузера. Тесты идут в поясе,
+    // далёком от Алматы (UTC+5), чтобы случайный пересчёт сдвигал дни и ронял их на любой машине
+    env: { TZ: 'America/Los_Angeles' },
   },
 });

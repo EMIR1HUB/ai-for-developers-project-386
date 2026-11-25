@@ -1,8 +1,18 @@
 import '@testing-library/jest-dom/vitest';
+import { notifications } from '@mantine/notifications';
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterAll, afterEach, beforeAll } from 'vitest';
+import { server } from './src/test/mockApi.ts';
 
-afterEach(() => cleanup());
+// Запрос без обработчика — ошибка теста: сеть в тестах описана явно
+beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
+afterEach(() => {
+  cleanup();
+  server.resetHandlers();
+  // Уведомления Mantine живут в глобальном хранилище и иначе перешли бы в следующий тест
+  notifications.clean();
+});
+afterAll(() => server.close());
 
 const noop = () => {};
 
@@ -20,3 +30,10 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: () => false,
   }),
 });
+
+// jsdom не реализует ResizeObserver, а ScrollArea Mantine следит через него за размерами
+window.ResizeObserver = class {
+  observe = noop;
+  unobserve = noop;
+  disconnect = noop;
+};

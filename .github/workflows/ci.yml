@@ -22,4 +22,33 @@ jobs:
       # Явно, а не через postinstall-хук: при кэше инструментов хук может не сработать
       - run: mise run install
 
+      # Chromium для браузерных сценариев вместе с системными библиотеками (apt через sudo).
+      # Локально браузер скачивает postinstall-хук mise, но без системных зависимостей
+      - run: npx playwright install --with-deps chromium
+
+      # api/openapi.yaml коммитится: после генерации из api/main.tsp рабочее дерево должно
+      # остаться чистым, иначе контракт изменён без `mise run generate`
+      - run: mise run generate
+
+      - name: Check generated artifacts are committed
+        run: |
+          git diff --exit-code
+          changes="$(git status --porcelain --untracked-files=all)"
+          if [ -n "$changes" ]; then
+            echo "$changes"
+            echo "::error::mise run generate changed committed files. Run it locally and commit the result."
+            exit 1
+          fi
+
       - run: mise run check
+
+      # Отчёт Playwright со следами (trace) упавших сценариев
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          retention-days: 7

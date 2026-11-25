@@ -5,7 +5,8 @@
   "workspaces": [
     "api",
     "backend",
-    "frontend"
+    "frontend",
+    "e2e"
   ],
   "type": "module",
   "devDependencies": {
