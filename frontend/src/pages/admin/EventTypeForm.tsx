@@ -4,14 +4,24 @@ import { IconAlertCircle } from '@tabler/icons-react';
 import { useId, useState, type FormEvent } from 'react';
 import { errorMessage, fieldErrors, isApiError, type FieldErrors } from '../../api/errors.ts';
 import { eventTypesCreate } from '../../api/generated/sdk.gen';
-import { paths } from '../../paths.ts';
+import { bookingPath } from '../../paths.ts';
 
-// Длительность 15–240 минут с шагом 15 (спецификация #11): выбор из списка не даёт ввести другое
-const DURATION_STEP = 15;
-const DURATION_OPTIONS = Array.from({ length: 240 / DURATION_STEP }, (_, index) => {
-  const minutes = (index + 1) * DURATION_STEP;
-  return { value: String(minutes), label: `${minutes} мин` };
-});
+// Правила полей повторяют `NewEventType` из `api/main.tsp` и проверку на сервере
+// (`backend/src/routes/eventTypes.ts`), они источник правды: при изменении правил поправь и здесь.
+// Форма не проверяет значения сама, эти числа нужны для списка длительностей и подсказки
+const ID_MIN_LENGTH = 3;
+const ID_MAX_LENGTH = 50;
+const DURATION_MIN_MINUTES = 15;
+const DURATION_MAX_MINUTES = 240;
+const DURATION_STEP_MINUTES = 15;
+// Выбор из списка не даёт ввести длительность вне правил
+const DURATION_OPTIONS = Array.from(
+  { length: (DURATION_MAX_MINUTES - DURATION_MIN_MINUTES) / DURATION_STEP_MINUTES + 1 },
+  (_, index) => {
+    const minutes = DURATION_MIN_MINUTES + index * DURATION_STEP_MINUTES;
+    return { value: String(minutes), label: `${minutes} мин` };
+  },
+);
 
 interface FormValues {
   id: string;
@@ -59,7 +69,11 @@ export function EventTypeForm({ onCreated }: { onCreated: () => void }) {
     }
   }
 
-  const bookingPath = `${paths.catalog}/${values.id.trim() || '<id>'}`;
+  const trimmedId = values.id.trim();
+  // Адрес показывается, когда есть что подставить: `bookingPath` кодирует параметр пути
+  const idDescription =
+    `Строчные латинские буквы, цифры и дефис, ${ID_MIN_LENGTH}–${ID_MAX_LENGTH} символов.` +
+    (trimmedId ? ` Адрес страницы: ${bookingPath(trimmedId)}` : '');
 
   return (
     <form aria-labelledby={titleId} onSubmit={handleSubmit} noValidate>
@@ -74,7 +88,7 @@ export function EventTypeForm({ onCreated }: { onCreated: () => void }) {
         )}
         <TextInput
           label="Идентификатор"
-          description={`Строчные латинские буквы, цифры и дефис, 3–50 символов. Адрес страницы: ${bookingPath}`}
+          description={idDescription}
           value={values.id}
           onChange={(event) => change('id')(event.currentTarget.value)}
           error={errors.id}
