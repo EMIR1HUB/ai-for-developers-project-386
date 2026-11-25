@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/EMIR1HUB/ai-for-developers-project-386/compare/v0.2.0...v0.3.0) (2026-11-25)
+
+
+### Features
+
+* docker-образ и деплой на render ([#22](https://github.com/EMIR1HUB/ai-for-developers-project-386/issues/22)) ([70a0875](https://github.com/EMIR1HUB/ai-for-developers-project-386/commit/70a0875789839b266d0840fa2916816e9031ed4a))
+* docker-образ приложения ([#22](https://github.com/EMIR1HUB/ai-for-developers-project-386/issues/22)) ([cb02409](https://github.com/EMIR1HUB/ai-for-developers-project-386/commit/cb0240949de85470dbd2126c75c72233d8ac2e08))
+
 ## [0.2.0](https://github.com/EMIR1HUB/ai-for-developers-project-386/compare/v0.1.0...v0.2.0) (2026-11-25)
 
 
