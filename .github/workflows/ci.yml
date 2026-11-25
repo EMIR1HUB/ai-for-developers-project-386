@@ -73,8 +73,10 @@ jobs:
           set -euo pipefail
           base=http://127.0.0.1:8080
 
-          # Старт занимает секунды: ждём, пока /api/health ответит
-          curl --fail --silent --show-error --retry 20 --retry-delay 1 --retry-connrefused \
+          # Старт занимает секунды: ждём, пока /api/health ответит. Пока приложение не слушает порт,
+          # Docker уже принимает соединение и сбрасывает его (connection reset), а не отказывает,
+          # поэтому повторять нужно любые ошибки (--retry-all-errors), не только connection refused
+          curl --fail --silent --show-error --retry 30 --retry-delay 1 --retry-all-errors \
             "$base/api/health" | grep --fixed-strings '"status":"ok"'
 
           # Фронтенд раздаёт сам сервер: главная страница и адрес SPA получают index.html
